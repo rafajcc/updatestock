@@ -1,0 +1,212 @@
+<?php
+
+namespace Antigravity\UpdateStock\Service;
+
+use Antigravity\UpdateStock\Repository\StockRepository;
+use Product;
+
+class StockUpdateService
+{
+    private $stockRepository;
+    private $backupService;
+    private $consistencyService;
+    private $moduleDir;
+
+    public function __construct(
+        StockRepository $stockRepository,
+        BackupService $backupService,
+        ConsistencyService $consistencyService,
+        $moduleDir
+    ) {
+        $this->stockRepository = $stockRepository;
+        $this->backupService = $backupService;
+        $this->consistencyService = $consistencyService;
+        $this->moduleDir = $moduleDir;
+    }
+
+    public function processInventory($files, $scope, $shopId, $totalInventory)
+    {
+        // 1. Create Backup
+        if (!$this->backupService->createBackup()) {
+            throw new \Exception('Failed to create backup. Inventory execution aborted.');
+        }
+
+        // 2. Parse Files
+        $inventoryData = $this->parseInventoryFiles($files);
+        if (empty($inventoryData)) {
+            throw new \Exception('No valid data found in selected files.');
+        }
+
+        // 3. Update Stock
+        $reportData = $this->updateStock($inventoryData, $scope, $shopId, $totalInventory);
+
+        // 4. Consistency Checks
+        $consistencyResults = $this->consistencyService->runTests($shopId);
+
+        // 5. Generate Reports
+        $reports = $this->generateReports($reportData, $consistencyResults);
+
+        return [
+            'reports' => $reports,
+            'consistency' => $consistencyResults
+        ];
+    }
+
+    protected function parseInventoryFiles($files)
+    {
+        $uploadDir = $this->moduleDir . 'uploads/';
+        $totals = [];
+
+        foreach ($files as $filename) {
+            $path = $uploadDir . basename($filename);
+            if (!file_exists($path))
+                continue;
+
+            $handle = fopen($path, 'r');
+            if ($handle) {
+                while (($line = fgets($handle)) !== false) {
+                    $line = trim($line);
+                    if (empty($line))
+                        continue;
+                    $parts = explode(';', $line);
+                    $ean = trim($parts[0]);
+                    if (!empty($ean) && is_numeric($ean)) {
+                        if (!isset($totals[$ean]))
+                            $totals[$ean] = 0;
+                        $totals[$ean]++;
+                    }
+                }
+                fclose($handle);
+            }
+        }
+        return $totals;
+    }
+
+    protected function updateStock($inventoryData, $scope, $shopId, $totalInventory)
+    {
+        $report = ['updated' => [], 'unknown' => [], 'zeroed' => [], 'disabled' => []];
+        $processedProducts = [];
+
+        foreach ($inventoryData as $ean => $newQty) {
+            $result = $this->stockRepository->getProductByEan($ean);
+
+            if (!$result) {
+                $report['unknown'][] = $ean;
+                continue;
+            }
+
+            $id_product = (int) $result['id_product'];
+            $id_product_attribute = (int) $result['id_product_attribute'];
+            $processedProducts[$id_product] = true;
+
+            $currentStock = $this->stockRepository->getCurrentStock($id_product, $id_product_attribute, ($scope === 'single' ? $shopId : null));
+            $oldQty = $currentStock ? (int) $currentStock['quantity'] : 0;
+            $reserved = $currentStock ? (int) $currentStock['reserved_quantity'] : 0;
+            $finalQty = $newQty - $reserved;
+
+            if ($scope === 'single') {
+                $this->stockRepository->updateStock($id_product, $id_product_attribute, $shopId, $finalQty, $newQty, $reserved);
+            } else {
+                $this->stockRepository->updateStockGlobal($id_product, $id_product_attribute, $finalQty, $newQty);
+            }
+
+            $productName = Product::getProductName($id_product, $id_product_attribute);
+            $report['updated'][] = ['ean' => $ean, 'name' => $productName, 'old_qty' => $oldQty, 'new_qty' => $finalQty];
+        }
+
+        // Synch id_product_attribute = 0
+        foreach (array_keys($processedProducts) as $id_p) {
+            $this->updateProductAttributeZero($id_p, $scope, $shopId);
+        }
+
+        if ($totalInventory) {
+            $this->processTotalInventoryZeroing($processedProducts, $scope, $shopId, $report);
+        }
+
+        return $report;
+    }
+
+    protected function updateProductAttributeZero($id_product, $scope, $shopId)
+    {
+        $sums = $this->stockRepository->getProductAttributeSum($id_product, ($scope === 'single' ? $shopId : null));
+        if ($sums && $sums['pq'] !== null) {
+            $this->stockRepository->updateProductAttributeZero($id_product, $sums['q'], $sums['pq'], $sums['rq'], ($scope === 'single' ? $shopId : null));
+        }
+    }
+
+    protected function processTotalInventoryZeroing($processedProducts, $scope, $shopId, &$report)
+    {
+        $ids = implode(',', array_keys($processedProducts));
+        $rows = $this->stockRepository->getProductsNotIn($ids, ($scope === 'single' ? $shopId : null));
+
+        if ($rows) {
+            foreach ($rows as $row) {
+                $id_product = (int) $row['id_product'];
+                $id_pa = (int) $row['id_product_attribute'];
+                $newQty = 0 - (int) $row['reserved_quantity'];
+
+                if ($row['quantity'] != $newQty) {
+                    // Update
+                    if ($scope === 'single') {
+                        $this->stockRepository->updateStock($id_product, $id_pa, $shopId, $newQty, 0, (int) $row['reserved_quantity']);
+                    } else {
+                        // This part in global scope might be tricky, updateGlobal handles simple update
+                        $this->stockRepository->updateStockGlobal($id_product, $id_pa, $newQty, 0);
+                    }
+
+                    $productName = Product::getProductName($id_product, $id_pa);
+                    $report['zeroed'][] = ['id_product' => $id_product, 'name' => $productName, 'old_qty' => $row['quantity']];
+
+                    if ($id_pa == 0 && $newQty <= 0) {
+                        $this->stockRepository->disableProduct($id_product, ($scope === 'single' ? $shopId : null));
+                        $report['disabled'][] = ['id_product' => $id_product, 'name' => $productName];
+                    }
+                }
+            }
+        }
+    }
+
+    protected function generateReports($data, $consistencyResults = [])
+    {
+        $outputDir = $this->moduleDir . 'uploads/reports/';
+        if (!is_dir($outputDir))
+            mkdir($outputDir, 0755, true);
+        $timestamp = date('Ymd_His');
+
+        $reports = [];
+
+        $fp = fopen($outputDir . 'inventory_log_' . $timestamp . '.csv', 'w');
+        fputcsv($fp, ['EAN', 'Product Name', 'Quantity Before', 'Quantity After']);
+        foreach ($data['updated'] as $row)
+            fputcsv($fp, $row);
+        fclose($fp);
+        $reports['log'] = 'inventory_log_' . $timestamp . '.csv';
+
+        $fp = fopen($outputDir . 'zeroed_disabled_' . $timestamp . '.csv', 'w');
+        fputcsv($fp, ['ID Product', 'Product Name', 'Status']);
+        foreach ($data['zeroed'] as $row)
+            fputcsv($fp, [$row['id_product'], $row['name'], 'Set to 0']);
+        foreach ($data['disabled'] as $row)
+            fputcsv($fp, [$row['id_product'], $row['name'], 'Disabled']);
+        fclose($fp);
+        $reports['zeroed'] = 'zeroed_disabled_' . $timestamp . '.csv';
+
+        $fp = fopen($outputDir . 'unknown_eans_' . $timestamp . '.csv', 'w');
+        fputcsv($fp, ['EAN']);
+        foreach ($data['unknown'] as $ean)
+            fputcsv($fp, [$ean]);
+        fclose($fp);
+        $reports['unknown'] = 'unknown_eans_' . $timestamp . '.csv';
+
+        if (!empty($consistencyResults['inconsistencies'])) {
+            $fp = fopen($outputDir . 'inconsistencies_' . $timestamp . '.csv', 'w');
+            fputcsv($fp, ['Type', 'ID Product', 'ID Attr', 'Before', 'Corrected']);
+            foreach ($consistencyResults['inconsistencies'] as $row)
+                fputcsv($fp, [$row['type'], $row['id_product'], $row['id_product_attribute'], $row['value_before'], $row['value_corrected']]);
+            fclose($fp);
+            $reports['inconsistencies'] = 'inconsistencies_' . $timestamp . '.csv';
+        }
+
+        return $reports;
+    }
+}

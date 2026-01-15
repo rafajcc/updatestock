@@ -1,0 +1,7 @@
+admin_updatestock_inventory:
+  path: /updatestock/inventory
+  methods: [GET, POST]
+  defaults:
+    _controller: 'Antigravity\UpdateStock\Controller\Admin\InventoryController::index'
+    _legacy_controller: 'AdminUpdateStock'
+    _legacy_link: 'AdminUpdateStock'

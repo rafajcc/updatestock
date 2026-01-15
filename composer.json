@@ -1,0 +1,23 @@
+{
+  "name": "antigravity/updatestock",
+  "description": "PrestaShop module to update stock from text files",
+  "version": "1.0.0",
+  "license": "Commercial",
+  "authors": [
+    {
+      "name": "Antigravity",
+      "email": "contact@antigravity.io"
+    }
+  ],
+  "require": {
+    "php": ">=5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Antigravity\\UpdateStock\\": "src/"
+    }
+  },
+  "config": {
+    "preferred-install": "dist"
+  }
+}
