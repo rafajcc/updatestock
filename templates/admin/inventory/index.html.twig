@@ -283,6 +283,21 @@
                 status.innerText = "";
             }
         });
+
+        // Validation for File Selection
+        const btnDelete = document.querySelector('button[name="submitDeleteFiles"]');
+        const btnPreview = document.querySelector('button[name="submitPreview"]');
+
+        function validateFileSelection(e) {
+            const selected = document.querySelectorAll('input[name="selected_files[]"]:checked').length;
+            if (selected === 0) {
+                e.preventDefault();
+                alert("{{ 'Please select at least one file.'|trans({}, 'Modules.Updatestock.Admin') }}");
+            }
+        }
+
+        if (btnDelete) btnDelete.addEventListener('click', validateFileSelection);
+        if (btnPreview) btnPreview.addEventListener('click', validateFileSelection);
     });
 </script>
 {% endblock %}

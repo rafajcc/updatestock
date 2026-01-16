@@ -47,8 +47,21 @@ class InventoryController extends FrameworkBundleAdminController
                 $uploadedFile = $request->files->get('stock_files');
                 foreach ($request->files->get('stock_files', []) as $file) {
                     if ($file && $file->getClientOriginalExtension() === 'txt') {
-                        $file->move($uploadDir, $file->getClientOriginalName());
-                        LogsService::log('File uploaded: ' . $file->getClientOriginalName());
+                        $originalName = $file->getClientOriginalName();
+                        $targetPath = $uploadDir . $originalName;
+
+                        if (file_exists($targetPath)) {
+                            // File exists, append timestamp
+                            $info = pathinfo($originalName);
+                            $name = $info['filename'];
+                            $ext = $info['extension'];
+                            $newName = $name . '_' . date('Ymd_His') . '.' . $ext;
+                            $file->move($uploadDir, $newName);
+                            LogsService::log('File uploaded (renamed from ' . $originalName . '): ' . $newName);
+                        } else {
+                            $file->move($uploadDir, $originalName);
+                            LogsService::log('File uploaded: ' . $originalName);
+                        }
                     }
                 }
                 $this->addFlash('success', 'Files uploaded successfully.');

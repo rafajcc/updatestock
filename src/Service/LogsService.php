@@ -9,7 +9,7 @@ namespace Antigravity\UpdateStock\Service;
 class LogsService
 {
 
-    private static $updateStockVersion = "1.0.2";
+    private static $updateStockVersion = "1.0.4";
 
 
     public static function log($message, $severity = 'INFO', $sendToPSLogs = false)
