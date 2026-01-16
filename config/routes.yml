@@ -5,3 +5,9 @@ admin_updatestock_inventory:
     _controller: 'Antigravity\UpdateStock\Controller\Admin\InventoryController::index'
     _legacy_controller: 'AdminUpdateStock'
     _legacy_link: 'AdminUpdateStock'
+
+admin_updatestock_logs_get:
+  path: /updatestock/logs/get
+  methods: [POST]
+  defaults:
+    _controller: 'Antigravity\UpdateStock\Controller\Front\LogsController::getLogsAction'

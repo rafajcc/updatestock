@@ -2,9 +2,9 @@
 /**
  * Update Stock Module for PrestaShop
  *
- * @author    Antigravity
- * @copyright 2024 Antigravity
- * @license   Commercial
+ * @author    Vera Technology
+ * @copyright 2026 Vera Technology
+ * @license   MIT
  */
 
 if (!defined('_PS_VERSION_')) {
@@ -17,8 +17,8 @@ class UpdateStock extends Module
     {
         $this->name = 'updatestock';
         $this->tab = 'administration';
-        $this->version = '1.0.0';
-        $this->author = 'Antigravity';
+        $this->version = '1.0.2';
+        $this->author = 'Vera Technology';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
             'min' => '1.7',

@@ -6,6 +6,7 @@ use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
 use Symfony\Component\HttpFoundation\Request;
 use Antigravity\UpdateStock\Service\StockUpdateService;
 use Antigravity\UpdateStock\Service\BackupService;
+use Antigravity\UpdateStock\Service\LogsService;
 
 class InventoryController extends FrameworkBundleAdminController
 {
@@ -44,17 +45,73 @@ class InventoryController extends FrameworkBundleAdminController
             if ($request->request->has('submitStockUpload')) {
                 // Upload handling
                 $uploadedFile = $request->files->get('stock_files');
-                // For multiple files Symfony uses array structure differently, 
-                // simplifying to raw $_FILES or proper Symfony loop requires looping the Request files bag.
-                // Let's assume basic single file or use simple loop for simplicity in migration
                 foreach ($request->files->get('stock_files', []) as $file) {
                     if ($file && $file->getClientOriginalExtension() === 'txt') {
                         $file->move($uploadDir, $file->getClientOriginalName());
+                        LogsService::log('File uploaded: ' . $file->getClientOriginalName());
                     }
                 }
                 $this->addFlash('success', 'Files uploaded successfully.');
-                // Redirect to self to refresh list
                 return $this->redirectToRoute('admin_updatestock_inventory');
+            }
+
+            if ($request->request->has('submitPreview')) {
+                $selectedFiles = $request->request->get('selected_files');
+                $scope = $request->request->get('inventory_scope', 'single');
+                $totalInventory = (bool) $request->request->get('total_inventory');
+
+                try {
+                    $changes = $this->stockUpdateService->getInventoryChanges(
+                        $selectedFiles,
+                        $scope,
+                        (int) $this->getContext()->shop->id,
+                        $totalInventory
+                    );
+
+                    // Generate Preview Report
+                    $previewReportFile = 'preview_' . date('Ymd_His') . '.csv';
+                    $uploadDir = _PS_MODULE_DIR_ . 'updatestock/uploads/reports/';
+                    if (!is_dir($uploadDir))
+                        mkdir($uploadDir, 0755, true);
+
+                    $fp = fopen($uploadDir . $previewReportFile, 'w');
+                    fputcsv($fp, ['Type', 'EAN/ID', 'Name', 'Current Qty', 'New Qty']);
+
+                    $stats = [
+                        'updated' => count($changes['updated']),
+                        'zeroed' => count($changes['zeroed']),
+                        'unknown' => count($changes['unknown']),
+                        'disabled' => count($changes['disabled'])
+                    ];
+
+                    foreach ($changes['updated'] as $item) {
+                        fputcsv($fp, ['UPDATE', $item['ean'], $item['name'], $item['old_qty'], $item['new_qty']]);
+                    }
+                    foreach ($changes['zeroed'] as $item) {
+                        fputcsv($fp, ['ZERO', $item['id_product'], $item['name'], $item['old_qty'], 0]);
+                    }
+                    foreach ($changes['unknown'] as $ean) {
+                        fputcsv($fp, ['UNKNOWN', $ean, 'N/A', '-', '-']);
+                    }
+                    fclose($fp);
+
+                    // Pass state back to view
+                    return $this->render('@Modules/updatestock/templates/admin/inventory/index.html.twig', [
+                        'uploaded_files' => $uploadedFiles,
+                        'backup_available' => $backupAvailable,
+                        'preview_mode' => true,
+                        'preview_stats' => $stats,
+                        'preview_report' => $previewReportFile,
+                        // Preserved Params
+                        'selected_files' => $selectedFiles,
+                        'inventory_scope' => $scope,
+                        'total_inventory' => $totalInventory,
+                        'module_dir' => _MODULE_DIR_ . 'updatestock/'
+                    ]);
+
+                } catch (\Exception $e) {
+                    $this->addFlash('error', $e->getMessage());
+                }
             }
 
             if ($request->request->has('submitRunInventory')) {
@@ -81,10 +138,25 @@ class InventoryController extends FrameworkBundleAdminController
             }
 
             if ($request->request->has('submitRestoreBackup')) {
-                if ($this->backupService->restoreLatestBackup()) {
-                    $this->addFlash('success', 'Backup restored successfully');
-                } else {
-                    $this->addFlash('error', 'Failed to restore backup');
+                $backupFile = $request->request->get('backup_filename');
+                if ($backupFile) {
+                    if ($this->backupService->restoreBackup($backupFile)) {
+                        LogsService::log('Backup restored successfully: ' . $backupFile);
+                        $this->addFlash('success', 'Backup ' . $backupFile . ' restored successfully');
+                    } else {
+                        LogsService::log('Failed to restore backup: ' . $backupFile, 'ERROR');
+                        $this->addFlash('error', 'Failed to restore backup');
+                    }
+                }
+            }
+
+            if ($request->request->has('submitDeleteBackup')) {
+                $backupFile = $request->request->get('backup_filename');
+                if ($backupFile) {
+                    if ($this->backupService->deleteBackup($backupFile)) {
+                        LogsService::log('Backup deleted: ' . $backupFile);
+                        $this->addFlash('success', 'Backup deleted');
+                    }
                 }
             }
 
@@ -92,8 +164,10 @@ class InventoryController extends FrameworkBundleAdminController
                 $filesToDelete = $request->request->get('selected_files');
                 if ($filesToDelete) {
                     foreach ($filesToDelete as $f) {
-                        if (file_exists($uploadDir . basename($f)))
+                        if (file_exists($uploadDir . basename($f))) {
                             unlink($uploadDir . basename($f));
+                            LogsService::log('File deleted: ' . basename($f));
+                        }
                     }
                     $this->addFlash('success', 'Files deleted');
                     return $this->redirectToRoute('admin_updatestock_inventory');
@@ -104,6 +178,7 @@ class InventoryController extends FrameworkBundleAdminController
         return $this->render('@Modules/updatestock/templates/admin/inventory/index.html.twig', [
             'uploaded_files' => $uploadedFiles,
             'backup_available' => $backupAvailable,
+            'available_backups' => $this->backupService->getAvailableBackups(),
             'reports_generated' => $reports,
             'module_dir' => _MODULE_DIR_ . 'updatestock/'
         ]);

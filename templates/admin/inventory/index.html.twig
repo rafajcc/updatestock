@@ -83,6 +83,9 @@
             <button type="submit" name="submitDeleteFiles" class="btn btn-danger">
                 <i class="process-icon-delete"></i> {{ 'Delete Selected'|trans({}, 'Modules.Updatestock.Admin') }}
             </button>
+            <button type="submit" name="submitPreview" class="btn btn-info pull-right">
+                <i class="process-icon-search"></i> {{ 'Analyze & Preview'|trans({}, 'Modules.Updatestock.Admin') }}
+            </button>
         </div>
 
         <div class="panel-heading" style="margin-top: 20px;">
@@ -94,13 +97,13 @@
             <div class="col-lg-9">
                 <div class="radio">
                     <label>
-                        <input type="radio" name="inventory_scope" value="single" checked>
+                        <input type="radio" name="inventory_scope" value="single" {% if inventory_scope is defined and inventory_scope == 'single' %}checked{% elseif inventory_scope is not defined %}checked{% endif %}>
                         {{ 'Current Shop Only'|trans({}, 'Modules.Updatestock.Admin') }}
                     </label>
                 </div>
                 <div class="radio">
                     <label>
-                        <input type="radio" name="inventory_scope" value="multi">
+                        <input type="radio" name="inventory_scope" value="multi" {% if inventory_scope is defined and inventory_scope == 'multi' %}checked{% endif %}>
                         {{ 'All Shops (Multistore)'|trans({}, 'Modules.Updatestock.Admin') }}
                     </label>
                 </div>
@@ -112,7 +115,7 @@
              <div class="col-lg-9">
                 <div class="checkbox">
                     <label>
-                        <input type="checkbox" name="total_inventory" value="1">
+                        <input type="checkbox" name="total_inventory" value="1" {% if total_inventory is defined and total_inventory %}checked{% endif %}>
                          {{ 'Total Inventory (Set missing products to 0)'|trans({}, 'Modules.Updatestock.Admin') }}
                     </label>
                     <p class="help-block text-danger">
@@ -121,17 +124,165 @@
                 </div>
              </div>
         </div>
-
-        <div class="panel-footer">
-            <button type="submit" name="submitRunInventory" class="btn btn-primary pull-right" onclick="return confirm('{{ 'Are you sure you want to update the stock?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                <i class="process-icon-next"></i> {{ 'Execute Inventory'|trans({}, 'Modules.Updatestock.Admin') }}
-            </button>
-            {% if backup_available %}
-                <button type="submit" name="submitRestoreBackup" class="btn btn-warning pull-right" onclick="return confirm('{{ 'This will revert database to previous state. Are you sure?'|trans({}, 'Modules.Updatestock.Admin') }}');" style="margin-right: 10px;">
-                    <i class="process-icon-refresh"></i> {{ 'Restore Backup'|trans({}, 'Modules.Updatestock.Admin') }}
+        
+        {% if preview_mode is defined and preview_mode %}
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <i class="icon-search"></i> {{ 'Preview Results'|trans({}, 'Modules.Updatestock.Admin') }}
+                </div>
+                <div class="panel-body">
+                    <p><strong>{{ 'Analysis Summary:'|trans({}, 'Modules.Updatestock.Admin') }}</strong></p>
+                    <ul>
+                        <li>{{ 'Products to Update:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.updated }}</span></li>
+                        <li>{{ 'Products to Zero (Total Inventory):'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.zeroed }}</span></li>
+                        <li>{{ 'Products to Disable:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.disabled }}</span></li>
+                        <li>{{ 'Unknown EANs:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge badge-warning">{{ preview_stats.unknown }}</span></li>
+                    </ul>
+                    <hr>
+                    <p><a href="{{ module_dir }}uploads/reports/{{ preview_report }}" class="btn btn-default" target="_blank"><i class="icon-download"></i> {{ 'Download Detailed Preview CSV'|trans({}, 'Modules.Updatestock.Admin') }}</a></p>
+                    <div class="alert alert-warning">
+                        {{ 'Please review the preview CSV above content carefully. If everything looks correct, click "Confirm & Update" below.'|trans({}, 'Modules.Updatestock.Admin') }}
+                    </div>
+                </div>
+                {# Persist selections for final submission #}
+                {% for file in selected_files %}
+                    <input type="hidden" name="selected_files[]" value="{{ file }}">
+                {% endfor %}
+            </div>
+            
+             <div class="panel-footer">
+                <a href="{{ path('admin_updatestock_inventory') }}" class="btn btn-default">
+                    <i class="process-icon-cancel"></i> {{ 'Cancel / Reset'|trans({}, 'Modules.Updatestock.Admin') }}
+                </a>
+                <button type="submit" name="submitRunInventory" class="btn btn-success pull-right" onclick="return confirm('{{ 'This will Apply Changes to the database. Are you sure?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                    <i class="process-icon-save"></i> {{ 'Confirm & Update Stock'|trans({}, 'Modules.Updatestock.Admin') }}
                 </button>
-            {% endif %}
-        </div>
+            </div>
+        {% else %}
+            </div>
+        {% endif %}
     </form>
 </div>
+
+<div class="panel">
+    <div class="panel-heading">
+        <i class="icon-time"></i> {{ 'Backup History'|trans({}, 'Modules.Updatestock.Admin') }}
+    </div>
+    {% if available_backups is defined and available_backups %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                    <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                    <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                    <th class="text-right">{{ 'Actions'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in available_backups %}
+                    <tr>
+                        <td>{{ backup.filename }}</td>
+                        <td>{{ backup.date }}</td>
+                        <td>{{ backup.size }}</td>
+                        <td class="text-right">
+                             <form action="{{ path('admin_updatestock_inventory') }}" method="post" style="display:inline;">
+                                <input type="hidden" name="backup_filename" value="{{ backup.filename }}">
+                                <button type="submit" name="submitRestoreBackup" class="btn btn-warning btn-xs" onclick="return confirm('{{ 'RESTORE BACKUP? This will overwrite current stock data with this backup version.'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                    <i class="icon-refresh"></i> {{ 'Restore'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </button>
+                                <button type="submit" name="submitDeleteBackup" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this backup permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                    <i class="icon-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info">{{ 'No backups available.'|trans({}, 'Modules.Updatestock.Admin') }}</div>
+    {% endif %}
+</div>
+
+
+<div class="panel">
+    <div class="panel-heading">
+        <i class="icon-terminal"></i> {{ 'Live Logs'|trans({}, 'Modules.Updatestock.Admin') }}
+    </div>
+    <div class="form-horizontal">
+        <div class="form-group">
+            <label class="control-label col-lg-3">{{ 'Show Last Lines'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <div class="col-lg-2">
+                <select id="log-lines-selector" class="form-control">
+                    <option value="0">{{ 'No logs'|trans({}, 'Modules.Updatestock.Admin') }}</option>
+                    <option value="10">10</option>
+                    <option value="30">30</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="col-lg-7">
+                <span id="log-status" class="help-block"></span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="log-container-wrapper" style="display:none; margin-top: 15px;">
+        <pre id="log-viewer" style="background: #222; color: #0f0; padding: 10px; height: 300px; overflow-y: scroll; border-radius: 4px; font-family: monospace;"></pre>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selector = document.getElementById('log-lines-selector');
+        const viewerWrapper = document.getElementById('log-container-wrapper');
+        const viewer = document.getElementById('log-viewer');
+        const status = document.getElementById('log-status');
+        let refreshInterval = null;
+        const logUrl = "{{ path('admin_updatestock_logs_get') }}";
+
+        function fetchLogs() {
+            const lines = selector.value;
+            if (lines == 0) return;
+
+            status.innerText = "{{ 'Refreshing...'|trans({}, 'Modules.Updatestock.Admin') }}";
+
+            fetch(logUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ lines: lines })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.log) {
+                    viewer.innerText = data.log.join("\n");
+                    // Auto-scroll to bottom if near bottom? Or always?
+                    viewer.scrollTop = viewer.scrollHeight;
+                }
+                status.innerText = "{{ 'Last update:'|trans({}, 'Modules.Updatestock.Admin') }} " + new Date().toLocaleTimeString();
+            })
+            .catch(error => {
+                console.error('Error fetching logs:', error);
+                status.innerText = "{{ 'Error fetching logs'|trans({}, 'Modules.Updatestock.Admin') }}";
+            });
+        }
+
+        selector.addEventListener('change', function() {
+            const lines = this.value;
+            if (lines > 0) {
+                viewerWrapper.style.display = 'block';
+                fetchLogs(); // Initial fetch
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(fetchLogs, 5000); // 5 seconds
+            } else {
+                viewerWrapper.style.display = 'none';
+                if (refreshInterval) clearInterval(refreshInterval);
+                status.innerText = "";
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -3,6 +3,7 @@
 namespace Antigravity\UpdateStock\Service;
 
 use Antigravity\UpdateStock\Repository\StockRepository;
+use Antigravity\UpdateStock\Service\LogsService;
 use Product;
 
 class StockUpdateService
@@ -24,33 +25,7 @@ class StockUpdateService
         $this->moduleDir = $moduleDir;
     }
 
-    public function processInventory($files, $scope, $shopId, $totalInventory)
-    {
-        // 1. Create Backup
-        if (!$this->backupService->createBackup()) {
-            throw new \Exception('Failed to create backup. Inventory execution aborted.');
-        }
 
-        // 2. Parse Files
-        $inventoryData = $this->parseInventoryFiles($files);
-        if (empty($inventoryData)) {
-            throw new \Exception('No valid data found in selected files.');
-        }
-
-        // 3. Update Stock
-        $reportData = $this->updateStock($inventoryData, $scope, $shopId, $totalInventory);
-
-        // 4. Consistency Checks
-        $consistencyResults = $this->consistencyService->runTests($shopId);
-
-        // 5. Generate Reports
-        $reports = $this->generateReports($reportData, $consistencyResults);
-
-        return [
-            'reports' => $reports,
-            'consistency' => $consistencyResults
-        ];
-    }
 
     protected function parseInventoryFiles($files)
     {
@@ -82,11 +57,17 @@ class StockUpdateService
         return $totals;
     }
 
-    protected function updateStock($inventoryData, $scope, $shopId, $totalInventory)
+    public function getInventoryChanges($files, $scope, $shopId, $totalInventory)
     {
+        $inventoryData = $this->parseInventoryFiles($files);
+        if (empty($inventoryData)) {
+            throw new \Exception('No valid data found in selected files.');
+        }
+
         $report = ['updated' => [], 'unknown' => [], 'zeroed' => [], 'disabled' => []];
         $processedProducts = [];
 
+        // 1. Calculate Updates
         foreach ($inventoryData as $ean => $newQty) {
             $result = $this->stockRepository->getProductByEan($ean);
 
@@ -104,26 +85,116 @@ class StockUpdateService
             $reserved = $currentStock ? (int) $currentStock['reserved_quantity'] : 0;
             $finalQty = $newQty - $reserved;
 
-            if ($scope === 'single') {
-                $this->stockRepository->updateStock($id_product, $id_product_attribute, $shopId, $finalQty, $newQty, $reserved);
-            } else {
-                $this->stockRepository->updateStockGlobal($id_product, $id_product_attribute, $finalQty, $newQty);
-            }
+            // Only report if changed? Or report all? Usually report all found in file is good feedback.
+            // But for preview, showing ONLY changes is better?
+            // User request: "summary of changes to be applied".
 
             $productName = Product::getProductName($id_product, $id_product_attribute);
-            $report['updated'][] = ['ean' => $ean, 'name' => $productName, 'old_qty' => $oldQty, 'new_qty' => $finalQty];
+            $report['updated'][] = [
+                'ean' => $ean,
+                'name' => $productName,
+                'old_qty' => $oldQty,
+                'new_prev_qty' => $newQty, // physical
+                'new_qty' => $finalQty, // quantity
+                'id_product' => $id_product,
+                'id_product_attribute' => $id_product_attribute,
+                'reserved' => $reserved
+            ];
         }
 
-        // Synch id_product_attribute = 0
+        // 2. Calculate Zeroes
+        if ($totalInventory) {
+            $ids = implode(',', array_keys($processedProducts));
+            $rows = $this->stockRepository->getProductsNotIn($ids, ($scope === 'single' ? $shopId : null));
+
+            if ($rows) {
+                foreach ($rows as $row) {
+                    $id_product = (int) $row['id_product'];
+                    $id_pa = (int) $row['id_product_attribute'];
+                    $newQty = 0 - (int) $row['reserved_quantity'];
+
+                    if ($row['quantity'] != $newQty || $row['physical_quantity'] != 0) {
+                        $productName = Product::getProductName($id_product, $id_pa);
+                        $item = ['id_product' => $id_product, 'id_product_attribute' => $id_pa, 'name' => $productName, 'old_qty' => $row['quantity'], 'new_qty' => $newQty, 'reserved' => $row['reserved_quantity']];
+                        $report['zeroed'][] = $item;
+
+                        if ($id_pa == 0 && $newQty <= 0) {
+                            $report['disabled'][] = ['id_product' => $id_product, 'name' => $productName];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $report;
+    }
+
+    public function processInventory($files, $scope, $shopId, $totalInventory)
+    {
+        // 1. Create Backup
+        if (!$this->backupService->createBackup()) {
+            throw new \Exception('Failed to create backup. Inventory execution aborted.');
+        }
+
+        // 2. Get Changes (Re-calculate to be safe)
+        $changes = $this->getInventoryChanges($files, $scope, $shopId, $totalInventory);
+
+        // 3. Apply Changes
+        $this->applyChanges($changes, $scope, $shopId);
+        LogsService::log(sprintf(
+            'Stock update finished. Updates: %d, Zeroed: %d, Disabled: %d, Unknown: %d',
+            count($changes['updated']),
+            count($changes['zeroed']),
+            count($changes['disabled']),
+            count($changes['unknown'])
+        ));
+
+        // 4. Consistency Checks
+        $consistencyResults = $this->consistencyService->runTests($shopId);
+
+        // 5. Generate Reports
+        $reports = $this->generateReports($changes, $consistencyResults);
+
+        return [
+            'reports' => $reports,
+            'consistency' => $consistencyResults
+        ];
+    }
+
+    protected function applyChanges($changes, $scope, $shopId)
+    {
+        // Apply Updates
+        foreach ($changes['updated'] as $item) {
+            if (isset($item['new_prev_qty'])) { // It's an update
+                if ($scope === 'single') {
+                    $this->stockRepository->updateStock($item['id_product'], $item['id_product_attribute'], $shopId, $item['new_qty'], $item['new_prev_qty'], $item['reserved']);
+                } else {
+                    $this->stockRepository->updateStockGlobal($item['id_product'], $item['id_product_attribute'], $item['new_qty'], $item['new_prev_qty']);
+                }
+            }
+        }
+
+        // Sync attributes zero
+        $processedProducts = [];
+        foreach ($changes['updated'] as $item)
+            $processedProducts[$item['id_product']] = true;
         foreach (array_keys($processedProducts) as $id_p) {
             $this->updateProductAttributeZero($id_p, $scope, $shopId);
         }
 
-        if ($totalInventory) {
-            $this->processTotalInventoryZeroing($processedProducts, $scope, $shopId, $report);
+        // Apply Zeroes
+        foreach ($changes['zeroed'] as $item) {
+            if ($scope === 'single') {
+                $this->stockRepository->updateStock($item['id_product'], $item['id_product_attribute'], $shopId, $item['new_qty'], 0, $item['reserved']);
+            } else {
+                $this->stockRepository->updateStockGlobal($item['id_product'], $item['id_product_attribute'], $item['new_qty'], 0);
+            }
         }
 
-        return $report;
+        // Apply Disabled
+        foreach ($changes['disabled'] as $item) {
+            $this->stockRepository->disableProduct($item['id_product'], ($scope === 'single' ? $shopId : null));
+        }
     }
 
     protected function updateProductAttributeZero($id_product, $scope, $shopId)
@@ -131,38 +202,6 @@ class StockUpdateService
         $sums = $this->stockRepository->getProductAttributeSum($id_product, ($scope === 'single' ? $shopId : null));
         if ($sums && $sums['pq'] !== null) {
             $this->stockRepository->updateProductAttributeZero($id_product, $sums['q'], $sums['pq'], $sums['rq'], ($scope === 'single' ? $shopId : null));
-        }
-    }
-
-    protected function processTotalInventoryZeroing($processedProducts, $scope, $shopId, &$report)
-    {
-        $ids = implode(',', array_keys($processedProducts));
-        $rows = $this->stockRepository->getProductsNotIn($ids, ($scope === 'single' ? $shopId : null));
-
-        if ($rows) {
-            foreach ($rows as $row) {
-                $id_product = (int) $row['id_product'];
-                $id_pa = (int) $row['id_product_attribute'];
-                $newQty = 0 - (int) $row['reserved_quantity'];
-
-                if ($row['quantity'] != $newQty) {
-                    // Update
-                    if ($scope === 'single') {
-                        $this->stockRepository->updateStock($id_product, $id_pa, $shopId, $newQty, 0, (int) $row['reserved_quantity']);
-                    } else {
-                        // This part in global scope might be tricky, updateGlobal handles simple update
-                        $this->stockRepository->updateStockGlobal($id_product, $id_pa, $newQty, 0);
-                    }
-
-                    $productName = Product::getProductName($id_product, $id_pa);
-                    $report['zeroed'][] = ['id_product' => $id_product, 'name' => $productName, 'old_qty' => $row['quantity']];
-
-                    if ($id_pa == 0 && $newQty <= 0) {
-                        $this->stockRepository->disableProduct($id_product, ($scope === 'single' ? $shopId : null));
-                        $report['disabled'][] = ['id_product' => $id_product, 'name' => $productName];
-                    }
-                }
-            }
         }
     }
 
@@ -206,6 +245,10 @@ class StockUpdateService
             fclose($fp);
             $reports['inconsistencies'] = 'inconsistencies_' . $timestamp . '.csv';
         }
+
+
+
+        LogsService::log('Reports generated: ' . implode(', ', $reports));
 
         return $reports;
     }
