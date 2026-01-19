@@ -1,6 +1,6 @@
 <?php
 
-namespace Antigravity\UpdateStock\Repository;
+namespace Module\UpdateStock\Repository;
 
 use Db;
 use Product;

@@ -1,13 +1,15 @@
-admin_updatestock_inventory:
-  path: /updatestock/inventory
+admin_updatestock_index:
+  path: /updatestock
   methods: [GET, POST]
   defaults:
-    _controller: 'Antigravity\UpdateStock\Controller\Admin\InventoryController::index'
-    _legacy_controller: 'AdminUpdateStock'
-    _legacy_link: 'AdminUpdateStock'
+    _controller: 'Antigravity\UpdateStock\Controller\Admin\UpdateStockController::indexAction'
+    _legacy_controller: 'UpdateStockController'
+    _legacy_link: 'UpdateStockController'
 
 admin_updatestock_logs_get:
   path: /updatestock/logs/get
   methods: [POST]
   defaults:
     _controller: 'Antigravity\UpdateStock\Controller\Front\LogsController::getLogsAction'
+    _legacy_controller: 'LogsController'
+    _legacy_link: 'LogsController:getLogsAction'

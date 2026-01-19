@@ -1,8 +1,8 @@
 <?php
 
-namespace Antigravity\UpdateStock\Service;
+namespace Module\UpdateStock\Service;
 
-use Antigravity\UpdateStock\Repository\StockRepository;
+use Module\UpdateStock\Repository\StockRepository;
 
 class ConsistencyService
 {

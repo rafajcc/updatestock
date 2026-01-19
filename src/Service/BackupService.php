@@ -1,10 +1,10 @@
 <?php
 
-namespace Antigravity\UpdateStock\Service;
+namespace Module\UpdateStock\Service;
 
 use Db;
 use Context;
-use Antigravity\UpdateStock\Service\LogsService;
+use Module\UpdateStock\Service\LogsService;
 
 class BackupService
 {

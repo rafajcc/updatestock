@@ -3,25 +3,25 @@ services:
     public: true
     autowire: true
 
-  Antigravity\UpdateStock\Repository\StockRepository:
-    class: Antigravity\UpdateStock\Repository\StockRepository
+  Module\UpdateStock\Repository\StockRepository:
+    class: Module\UpdateStock\Repository\StockRepository
 
-  Antigravity\UpdateStock\Service\BackupService:
-    class: Antigravity\UpdateStock\Service\BackupService
+  Module\UpdateStock\Service\BackupService:
+    class: Module\UpdateStock\Service\BackupService
     arguments:
       $moduleDir: '%modules_dir%updatestock/'
 
-  Antigravity\UpdateStock\Service\ConsistencyService:
-    class: Antigravity\UpdateStock\Service\ConsistencyService
+  Module\UpdateStock\Service\ConsistencyService:
+    class: Module\UpdateStock\Service\ConsistencyService
 
-  Antigravity\UpdateStock\Service\StockUpdateService:
-    class: Antigravity\UpdateStock\Service\StockUpdateService
+  Module\UpdateStock\Service\StockUpdateService:
+    class: Module\UpdateStock\Service\StockUpdateService
     arguments:
-      $stockRepository: '@Antigravity\UpdateStock\Repository\StockRepository'
-      $backupService: '@Antigravity\UpdateStock\Service\BackupService'
-      $consistencyService: '@Antigravity\UpdateStock\Service\ConsistencyService'
+      $stockRepository: '@Module\UpdateStock\Repository\StockRepository'
+      $backupService: '@Module\UpdateStock\Service\BackupService'
+      $consistencyService: '@Module\UpdateStock\Service\ConsistencyService'
       $moduleDir: '%modules_dir%updatestock/'
 
-  Antigravity\UpdateStock\Controller\Admin\InventoryController:
-    class: Antigravity\UpdateStock\Controller\Admin\InventoryController
+  Module\UpdateStock\Controller\Admin\UpdateStockController:
+    class: Module\UpdateStock\Controller\Admin\UpdateStockController
     tags: ['controller.service_arguments']

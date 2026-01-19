@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace Antigravity\UpdateStock\Service;
+namespace Module\UpdateStock\Service;
 
 
 
@@ -9,7 +9,7 @@ namespace Antigravity\UpdateStock\Service;
 class LogsService
 {
 
-    private static $updateStockVersion = "1.0.6";
+    private static $updateStockVersion = "1.0.7";
 
 
     public static function log($message, $severity = 'INFO', $sendToPSLogs = false)

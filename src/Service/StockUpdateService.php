@@ -1,9 +1,9 @@
 <?php
 
-namespace Antigravity\UpdateStock\Service;
+namespace Module\UpdateStock\Service;
 
-use Antigravity\UpdateStock\Repository\StockRepository;
-use Antigravity\UpdateStock\Service\LogsService;
+use Module\UpdateStock\Repository\StockRepository;
+use Module\UpdateStock\Service\LogsService;
 use Product;
 
 class StockUpdateService

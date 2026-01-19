@@ -17,7 +17,7 @@ class UpdateStock extends Module
     {
         $this->name = 'updatestock';
         $this->tab = 'administration';
-        $this->version = '1.0.6';
+        $this->version = '1.0.7';
         $this->author = 'Vera Technology';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
@@ -53,7 +53,7 @@ class UpdateStock extends Module
     {
         $tab = new Tab();
         $tab->active = 1;
-        $tab->class_name = 'AdminUpdateStock';
+        $tab->class_name = 'UpdateStockController';
         $tab->name = array();
         foreach (Language::getLanguages(true) as $lang) {
             $tab->name[$lang['id_lang']] = 'Stock Update Inventory';
@@ -69,7 +69,7 @@ class UpdateStock extends Module
      */
     protected function uninstallTab()
     {
-        $id_tab = (int) Tab::getIdFromClassName('AdminUpdateStock');
+        $id_tab = (int) Tab::getIdFromClassName('UpdateStockController');
         if ($id_tab) {
             $tab = new Tab($id_tab);
             return $tab->delete();

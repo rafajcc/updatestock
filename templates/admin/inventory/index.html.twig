@@ -6,7 +6,7 @@
         <i class="icon-cogs"></i> {{ 'Update Stock from Text Files'|trans({}, 'Modules.Updatestock.Admin') }}
     </div>
 
-    <form action="{{ path('admin_updatestock_inventory') }}" method="post" enctype="multipart/form-data" class="form-horizontal">
+    <form action="{{ path('admin_updatestock_index') }}" method="post" enctype="multipart/form-data" class="form-horizontal">
         <div class="form-group">
             <label class="control-label col-lg-3">{{ 'Select File(s)'|trans({}, 'Modules.Updatestock.Admin') }}</label>
             <div class="col-lg-6">
@@ -51,7 +51,7 @@
     <div class="panel-heading">
         <i class="icon-list"></i> {{ 'Uploaded Files & Execution'|trans({}, 'Modules.Updatestock.Admin') }}
     </div>
-    <form action="{{ path('admin_updatestock_inventory') }}" method="post" class="form-horizontal">
+    <form action="{{ path('admin_updatestock_index') }}" method="post" class="form-horizontal">
         <table class="table">
             <thead>
                 <tr>
@@ -151,7 +151,7 @@
             </div>
             
              <div class="panel-footer">
-                <a href="{{ path('admin_updatestock_inventory') }}" class="btn btn-default">
+                <a href="{{ path('admin_updatestock_index') }}" class="btn btn-default">
                     <i class="process-icon-cancel"></i> {{ 'Cancel / Reset'|trans({}, 'Modules.Updatestock.Admin') }}
                 </a>
                 <button type="submit" name="submitRunInventory" class="btn btn-success pull-right" onclick="return confirm('{{ 'This will Apply Changes to the database. Are you sure?'|trans({}, 'Modules.Updatestock.Admin') }}');">
@@ -185,7 +185,7 @@
                         <td>{{ backup.date }}</td>
                         <td>{{ backup.size }}</td>
                         <td class="text-right">
-                             <form action="{{ path('admin_updatestock_inventory') }}" method="post" style="display:inline;">
+                             <form action="{{ path('admin_updatestock_index') }}" method="post" style="display:inline;">
                                 <input type="hidden" name="backup_filename" value="{{ backup.filename }}">
                                 <button type="submit" name="submitRestoreBackup" class="btn btn-warning btn-xs" onclick="return confirm('{{ 'RESTORE BACKUP? This will overwrite current stock data with this backup version.'|trans({}, 'Modules.Updatestock.Admin') }}');">
                                     <i class="icon-refresh"></i> {{ 'Restore'|trans({}, 'Modules.Updatestock.Admin') }}

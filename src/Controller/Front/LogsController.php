@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-namespace Antigravity\UpdateStock\Controller\Front;
+namespace Module\UpdateStock\Controller\Front;
 
-use Antigravity\UpdateStock\Service\LogsService;
+use Module\UpdateStock\Service\LogsService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
