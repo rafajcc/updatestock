@@ -31,27 +31,45 @@ class StockUpdateService
     {
         $uploadDir = $this->moduleDir . 'uploads/';
         $totals = [];
+        LogsService::log('Parsing files from: ' . $uploadDir);
 
         foreach ($files as $filename) {
             $path = $uploadDir . basename($filename);
-            if (!file_exists($path))
+            if (!file_exists($path)) {
+                LogsService::log('File to parse not found: ' . $path, 'WARN');
                 continue;
+            }
 
             $handle = fopen($path, 'r');
             if ($handle) {
+                $count = 0;
+                $valid = 0;
                 while (($line = fgets($handle)) !== false) {
+                    $count++;
                     $line = trim($line);
                     if (empty($line))
                         continue;
+
                     $parts = explode(';', $line);
                     $ean = trim($parts[0]);
-                    if (!empty($ean) && is_numeric($ean)) {
-                        if (!isset($totals[$ean]))
-                            $totals[$ean] = 0;
-                        $totals[$ean]++;
+
+                    // Debug first few errors
+                    if (empty($ean) || !is_numeric($ean)) {
+                        if ($count <= 5) {
+                            LogsService::log("Invalid line #$count in $filename: '$line' (EAN parsed as '$ean')", 'WARN');
+                        }
+                        continue;
                     }
+
+                    if (!isset($totals[$ean]))
+                        $totals[$ean] = 0;
+                    $totals[$ean]++;
+                    $valid++;
                 }
                 fclose($handle);
+                LogsService::log("Parsed $filename: $count lines, $valid valid EANs.");
+            } else {
+                LogsService::log("Could not open file: $path", 'ERROR');
             }
         }
         return $totals;
