@@ -298,6 +298,15 @@
 
         if (btnDelete) btnDelete.addEventListener('click', validateFileSelection);
         if (btnPreview) btnPreview.addEventListener('click', validateFileSelection);
+
+        // Select All Checkbox
+        const checkAll = document.querySelector('.checkmeable');
+        if (checkAll) {
+            checkAll.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('input[name="selected_files[]"]');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+        }
     });
 </script>
 {% endblock %}
