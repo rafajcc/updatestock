@@ -1,7 +1,7 @@
 {
   "name": "antigravity/updatestock",
   "description": "PrestaShop module to update stock from text files",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "license": "Commercial",
   "authors": [
     {

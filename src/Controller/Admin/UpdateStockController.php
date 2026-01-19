@@ -23,7 +23,7 @@ class UpdateStockController extends FrameworkBundleAdminController
     public function indexAction(Request $request)
     {
         $backupAvailable = $this->backupService->hasBackups();
-        $uploadDir = _PS_MODULE_DIR_ . 'updatestock/uploads/';
+        $uploadDir = _PS_MODULE_DIR_ . '/updatestock/temp_files/';
 
         // Simple file listing for now (could be moved to service)
         $files = glob($uploadDir . '*.txt');

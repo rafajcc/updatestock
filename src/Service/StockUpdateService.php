@@ -29,7 +29,7 @@ class StockUpdateService
 
     protected function parseInventoryFiles($files)
     {
-        $uploadDir = $this->moduleDir . 'uploads/';
+        $uploadDir = $this->moduleDir . 'temp_files/';
         $totals = [];
         LogsService::log('Parsing files from: ' . $uploadDir);
 

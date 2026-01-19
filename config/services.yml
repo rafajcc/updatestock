@@ -9,7 +9,7 @@ services:
   Module\UpdateStock\Service\BackupService:
     class: Module\UpdateStock\Service\BackupService
     arguments:
-      $moduleDir: '%modules_dir%updatestock/'
+      $moduleDir: '%modules_dir%/updatestock/'
 
   Module\UpdateStock\Service\ConsistencyService:
     class: Module\UpdateStock\Service\ConsistencyService
@@ -20,7 +20,7 @@ services:
       $stockRepository: '@Module\UpdateStock\Repository\StockRepository'
       $backupService: '@Module\UpdateStock\Service\BackupService'
       $consistencyService: '@Module\UpdateStock\Service\ConsistencyService'
-      $moduleDir: '%modules_dir%updatestock/'
+      $moduleDir: '%modules_dir%/updatestock/'
 
   Module\UpdateStock\Controller\Admin\UpdateStockController:
     class: Module\UpdateStock\Controller\Admin\UpdateStockController
