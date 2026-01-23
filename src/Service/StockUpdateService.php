@@ -269,9 +269,9 @@ class StockUpdateService
 
         if (!empty($consistencyResults['inconsistencies'])) {
             $fp = fopen($outputDir . 'inconsistencies_' . $timestamp . '.csv', 'w');
-            fputcsv($fp, ['Type', 'ID Product', 'ID Attr', 'Before', 'Corrected']);
+            fputcsv($fp, ['Type', 'ID Product', 'ID Attr', 'Before', 'Correction Suggested']);
             foreach ($consistencyResults['inconsistencies'] as $row)
-                fputcsv($fp, [$row['type'], $row['id_product'], $row['id_product_attribute'], $row['value_before'], $row['value_corrected']]);
+                fputcsv($fp, [$row['type'], $row['id_product'], $row['id_product_attribute'], $row['value_before'], $row['value_suggested']]);
             fclose($fp);
             $reports['inconsistencies'] = 'inconsistencies_' . $timestamp . '.csv';
         }

@@ -55,7 +55,7 @@ class ConsistencyService
                         'id_product' => $id_product,
                         'id_product_attribute' => 0,
                         'value_before' => "Q:{$zeroRecord['quantity']}, PQ:{$zeroRecord['physical_quantity']}",
-                        'value_corrected' => "Q:{$sums['q']}, PQ:{$sums['pq']}"
+                        'value_suggested' => "Q:{$sums['q']}, PQ:{$sums['pq']}"
                     ];
                     if ($fix) {
                         $this->stockRepository->updateProductAttributeZero($id_product, $sums['q'], $sums['pq'], $sums['rq'], $id_shop);
@@ -77,7 +77,7 @@ class ConsistencyService
                 'id_product' => $row['id_product'],
                 'id_product_attribute' => $row['id_product_attribute'],
                 'value_before' => "Q:{$row['quantity']}, PQ:{$row['physical_quantity']}",
-                'value_corrected' => "Set to 0"
+                'value_suggested' => "Set to 0"
             ];
             if ($fix) {
                 $this->stockRepository->zeroStock($row['id_product'], $row['id_product_attribute'], $id_shop);
@@ -96,7 +96,7 @@ class ConsistencyService
                 'id_product' => $row['id_product'],
                 'id_product_attribute' => $row['id_product_attribute'],
                 'value_before' => "Q:{$row['quantity']} != PQ:{$row['physical_quantity']} - R:{$row['reserved_quantity']}",
-                'value_corrected' => "Q:$expectedQ"
+                'value_suggested' => "Q:$expectedQ"
             ];
             if ($fix) {
                 $this->stockRepository->updateQuantity($row['id_product'], $row['id_product_attribute'], $expectedQ, $id_shop);
@@ -115,7 +115,7 @@ class ConsistencyService
                 'id_product' => $id_product,
                 'id_product_attribute' => 0,
                 'value_before' => "Active: 1",
-                'value_corrected' => "Active: 0"
+                'value_suggested' => "Active: 0"
             ];
             if ($fix) {
                 $this->stockRepository->disableProduct($id_product, $id_shop);
@@ -133,7 +133,7 @@ class ConsistencyService
                 'id_product' => 0,
                 'id_product_attribute' => 0,
                 'value_before' => "EAN: " . $row['ean13'],
-                'value_corrected' => "None (Manual Fix Required)"
+                'value_suggested' => "None (Manual Fix Required)"
             ];
         }
     }

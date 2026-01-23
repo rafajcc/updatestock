@@ -128,7 +128,7 @@ class UpdateStockController extends FrameworkBundleAdminController
             }
 
             if ($request->request->has('submitRunInventory')) {
-                $selectedFiles = $request->request->get('selected_files');
+                $selectedFiles = $request->request->get('confirmed_files');
                 $scope = $request->request->get('inventory_scope', 'single');
                 $totalInventory = (bool) $request->request->get('total_inventory');
 

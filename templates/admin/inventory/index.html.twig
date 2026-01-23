@@ -54,12 +54,12 @@
 </div>
 {% endif %}
 
-<div class="panel">
-    <div class="panel-heading">
-        <i class="icon-list"></i> {{ 'Uploaded Files & Execution'|trans({}, 'Modules.Updatestock.Admin') }}
-    </div>
-    <form action="{{ path('admin_updatestock_index') }}" method="post" class="form-horizontal">
-        <table class="table">
+<form action="{{ path('admin_updatestock_index') }}" method="post" class="form-horizontal">
+    <div class="panel">
+        <div class="panel-heading">
+            <i class="icon-list"></i> {{ 'Uploaded Files'|trans({}, 'Modules.Updatestock.Admin') }}
+        </div>
+        <table class="table table-striped">
             <thead>
                 <tr>
                     <th width="40"><input type="checkbox" name="checkmeable" class="checkmeable"></th>
@@ -85,18 +85,11 @@
                 {% endif %}
             </tbody>
         </table>
+    </div>
 
-        <div class="panel-footer">
-            <button type="submit" name="submitDeleteFiles" class="btn btn-danger">
-                <i class="process-icon-delete"></i> {{ 'Delete Selected'|trans({}, 'Modules.Updatestock.Admin') }}
-            </button>
-            <button type="submit" name="submitPreview" class="btn btn-info pull-right">
-                <i class="process-icon-search"></i> {{ 'Analyze & Preview'|trans({}, 'Modules.Updatestock.Admin') }}
-            </button>
-        </div>
-
-        <div class="panel-heading" style="margin-top: 20px;">
-             <i class="icon-cogs"></i> {{ 'Configuration'|trans({}, 'Modules.Updatestock.Admin') }}
+    <div class="panel">
+        <div class="panel-heading">
+             <i class="icon-cogs"></i> {{ 'Analysis Configuration & Actions'|trans({}, 'Modules.Updatestock.Admin') }}
         </div>
         
         <div class="form-group">
@@ -122,42 +115,52 @@
              <div class="col-lg-9">
                 <div class="checkbox">
                     <label>
-                        <input type="checkbox" name="total_inventory" value="1" {% if total_inventory is defined and total_inventory %}checked{% endif %}>
+                        <input type="checkbox" id="total-inventory-checkbox" name="total_inventory" value="1" {% if total_inventory is defined and total_inventory %}checked{% endif %}>
                          {{ 'Total Inventory (Set missing products to 0)'|trans({}, 'Modules.Updatestock.Admin') }}
                     </label>
-                    <p class="help-block text-danger">
+                    <p id="total-inventory-warning" class="help-block text-danger" style="display:none;">
                          {{ 'Warning: Products not found in the uploaded files will be set to quantity 0.'|trans({}, 'Modules.Updatestock.Admin') }}
                     </p>
                 </div>
              </div>
         </div>
+
+        <div class="panel-footer">
+            <button type="submit" name="submitDeleteFiles" class="btn btn-default">
+                <i class="process-icon-delete"></i> {{ 'Delete Selected Files'|trans({}, 'Modules.Updatestock.Admin') }}
+            </button>
+            <button type="submit" name="submitPreview" class="btn btn-primary pull-right">
+                <i class="process-icon-search"></i> {{ 'Analyze & Preview'|trans({}, 'Modules.Updatestock.Admin') }}
+            </button>
+        </div>
+    </div>
         
-        {% if preview_mode is defined and preview_mode %}
-            <div class="panel panel-info">
-                <div class="panel-heading">
-                    <i class="icon-search"></i> {{ 'Preview Results'|trans({}, 'Modules.Updatestock.Admin') }}
-                </div>
-                <div class="panel-body">
-                    <p><strong>{{ 'Analysis Summary:'|trans({}, 'Modules.Updatestock.Admin') }}</strong></p>
-                    <ul>
-                        <li>{{ 'Products to Update:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.updated }}</span></li>
-                        <li>{{ 'Products to Zero (Total Inventory):'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.zeroed }}</span></li>
-                        <li>{{ 'Products to Disable:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.disabled }}</span></li>
-                        <li>{{ 'Unknown EANs:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge badge-warning">{{ preview_stats.unknown }}</span></li>
-                    </ul>
-                    <hr>
-                    <p><a href="{{ module_dir }}uploads/reports/{{ preview_report }}" class="btn btn-default" target="_blank"><i class="icon-download"></i> {{ 'Download Detailed Preview CSV'|trans({}, 'Modules.Updatestock.Admin') }}</a></p>
-                    <div class="alert alert-warning">
-                        {{ 'Please review the preview CSV above content carefully. If everything looks correct, click "Confirm & Update" below.'|trans({}, 'Modules.Updatestock.Admin') }}
-                    </div>
-                </div>
-                {# Persist selections for final submission #}
-                {% for file in selected_files %}
-                    <input type="hidden" name="selected_files[]" value="{{ file }}">
-                {% endfor %}
+    {% if preview_mode is defined and preview_mode %}
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <i class="icon-search"></i> {{ 'Preview Results'|trans({}, 'Modules.Updatestock.Admin') }}
             </div>
-            
-             <div class="panel-footer">
+            <div class="panel-body">
+                <p><strong>{{ 'Analysis Summary:'|trans({}, 'Modules.Updatestock.Admin') }}</strong></p>
+                <ul>
+                    <li><strong>{{ 'Scope:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {% if inventory_scope == 'multi' %}{{ 'All Shops'|trans({}, 'Modules.Updatestock.Admin') }}{% else %}{{ 'Current Shop Only'|trans({}, 'Modules.Updatestock.Admin') }}{% endif %}</li>
+                    <li><strong>{{ 'Type:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {% if total_inventory %}{{ 'Total Inventory'|trans({}, 'Modules.Updatestock.Admin') }}{% else %}{{ 'Partial Inventory'|trans({}, 'Modules.Updatestock.Admin') }}{% endif %}</li>
+                    <li>{{ 'Products to Update:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.updated }}</span></li>
+                    <li>{{ 'Products to Zero (Total Inventory):'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.zeroed }}</span></li>
+                    <li>{{ 'Products to Disable:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.disabled }}</span></li>
+                    <li>{{ 'Unknown EANs:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge badge-warning">{{ preview_stats.unknown }}</span></li>
+                </ul>
+                <hr>
+                <p><a href="{{ module_dir }}uploads/reports/{{ preview_report }}" class="btn btn-default" target="_blank"><i class="icon-download"></i> {{ 'Download Detailed Preview CSV'|trans({}, 'Modules.Updatestock.Admin') }}</a></p>
+                <div class="alert alert-warning">
+                    {{ 'Please review the preview CSV above content carefully. If everything looks correct, click "Confirm & Update" below.'|trans({}, 'Modules.Updatestock.Admin') }}
+                </div>
+            </div>
+            {# Persist selections for final submission #}
+            {% for file in selected_files %}
+                <input type="hidden" name="confirmed_files[]" value="{{ file }}">
+            {% endfor %}
+            <div class="panel-footer">
                 <a href="{{ path('admin_updatestock_index') }}" class="btn btn-default">
                     <i class="process-icon-cancel"></i> {{ 'Cancel / Reset'|trans({}, 'Modules.Updatestock.Admin') }}
                 </a>
@@ -165,11 +168,9 @@
                     <i class="process-icon-save"></i> {{ 'Confirm & Update Stock'|trans({}, 'Modules.Updatestock.Admin') }}
                 </button>
             </div>
-        {% else %}
-            </div>
-        {% endif %}
-    </form>
-</div>
+        </div>
+    {% endif %}
+</form>
 
 <div class="panel">
     <div class="panel-heading">
@@ -218,7 +219,7 @@
     </div>
     <div class="form-horizontal">
         <div class="form-group">
-            <label class="control-label col-lg-3">{{ 'Show Last Lines'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <label class="control-label col-lg-2">{{ 'Show Last Lines'|trans({}, 'Modules.Updatestock.Admin') }}</label>
             <div class="col-lg-2">
                 <select id="log-lines-selector" class="form-control">
                     <option value="0">{{ 'No logs'|trans({}, 'Modules.Updatestock.Admin') }}</option>
@@ -235,8 +236,8 @@
                     <option value="DEBUG">DEBUG (All)</option>
                 </select>
             </div>
-            <div class="col-lg-7">
-                <span id="log-status" class="help-block"></span>
+            <div class="col-lg-4">
+                <span id="log-status" class="help-block" style="margin-top:0;"></span>
             </div>
         </div>
     </div>
@@ -273,12 +274,30 @@
             .then(data => {
                 if (data.log) {
                     const level = document.getElementById('log-level-selector').value;
-                    const filtered = data.log.filter(line => {
-                        if (level === 'DEBUG') return true;
-                        return !line.includes('[DEBUG]');
+                    const filtered = [];
+                    let showCurrentBlock = true;
+
+                    // Regex to identify start of a log line: [YYYY-MM-DD
+                    // Modify this if your date format differs
+                    const logStartRegex = /^\[\d{4}-\d{2}-\d{2}/;
+
+                    data.log.forEach(line => {
+                        // If this is a new log entry, decide visibility
+                        if (logStartRegex.test(line)) {
+                            if (level === 'INFO' && line.includes('[DEBUG]')) {
+                                showCurrentBlock = false;
+                            } else {
+                                showCurrentBlock = true;
+                            }
+                        }
+                        
+                        // Add line if current block is visible
+                        if (showCurrentBlock) {
+                            filtered.push(line);
+                        }
                     });
+
                     viewer.innerText = filtered.join("\n");
-                    // Auto-scroll to bottom if near bottom? Or always?
                     viewer.scrollTop = viewer.scrollHeight;
                 }
                 status.innerText = "{{ 'Last update:'|trans({}, 'Modules.Updatestock.Admin') }} " + new Date().toLocaleTimeString();
@@ -325,6 +344,23 @@
                 const checkboxes = document.querySelectorAll('input[name="selected_files[]"]');
                 checkboxes.forEach(cb => cb.checked = this.checked);
             });
+        }
+
+        // Total Inventory Warning Toggle
+        const totalCheckbox = document.getElementById('total-inventory-checkbox');
+        const warningMsg = document.getElementById('total-inventory-warning');
+
+        function toggleWarning() {
+            if (totalCheckbox.checked) {
+                warningMsg.style.display = 'block';
+            } else {
+                warningMsg.style.display = 'none';
+            }
+        }
+
+        if (totalCheckbox && warningMsg) {
+            totalCheckbox.addEventListener('change', toggleWarning);
+            toggleWarning(); // Initialize on load
         }
     });
 </script>
