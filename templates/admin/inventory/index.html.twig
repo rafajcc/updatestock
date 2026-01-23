@@ -14,7 +14,7 @@
                 <p class="help-block">{{ 'Format: EAN;;;;; (txt files only)'|trans({}, 'Modules.Updatestock.Admin') }}</p>
             </div>
             <div class="col-lg-3">
-                <button type="submit" name="submitStockUpload" class="btn btn-default">
+                <button type="submit" name="submitStockUpload" class="btn btn-primary">
                     <i class="process-icon-save"></i> {{ 'Upload'|trans({}, 'Modules.Updatestock.Admin') }}
                 </button>
             </div>
@@ -72,7 +72,7 @@
                 {% if uploaded_files is not empty %}
                     {% for file in uploaded_files %}
                         <tr>
-                            <td><input type="checkbox" name="selected_files[]" value="{{ file.name }}"></td>
+                            <td><input type="checkbox" name="selected_files[]" value="{{ file.name }}" {% if selected_files is defined and file.name in selected_files %}checked{% endif %}></td>
                             <td>{{ file.name }}</td>
                             <td>{{ file.size }} bytes</td>
                             <td>{{ file.date }}</td>
@@ -126,7 +126,7 @@
         </div>
 
         <div class="panel-footer">
-            <button type="submit" name="submitDeleteFiles" class="btn btn-default">
+            <button type="submit" name="submitDeleteFiles" class="btn btn-danger">
                 <i class="process-icon-delete"></i> {{ 'Delete Selected Files'|trans({}, 'Modules.Updatestock.Admin') }}
             </button>
             <button type="submit" name="submitPreview" class="btn btn-primary pull-right">
