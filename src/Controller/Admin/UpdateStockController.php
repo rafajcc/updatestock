@@ -173,6 +173,17 @@ class UpdateStockController extends FrameworkBundleAdminController
                 }
             }
 
+            if ($request->request->has('submitApplyFixes')) {
+                try {
+                    $fixCount = $this->stockUpdateService->applyConsistencyFixes((int) $this->getContext()->shop->id);
+                    $this->addFlash('success', "Consistency fixes applied successfully. ($fixCount fixes)");
+                    // Refresh report logic could be here, but redirect is simpler
+                    return $this->redirectToRoute('admin_updatestock_index');
+                } catch (\Exception $e) {
+                    $this->addFlash('error', $e->getMessage());
+                }
+            }
+
             if ($request->request->has('submitDeleteFiles')) {
                 $filesToDelete = $request->request->get('selected_files');
                 if ($filesToDelete) {

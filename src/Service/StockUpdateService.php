@@ -167,8 +167,8 @@ class StockUpdateService
             count($changes['unknown'])
         ));
 
-        // 4. Consistency Checks
-        $consistencyResults = $this->consistencyService->runTests($shopId);
+        // 4. Consistency Checks (Dry Run)
+        $consistencyResults = $this->consistencyService->runTests($shopId, false);
 
         // 5. Generate Reports
         $reports = $this->generateReports($changes, $consistencyResults);
@@ -177,6 +177,12 @@ class StockUpdateService
             'reports' => $reports,
             'consistency' => $consistencyResults
         ];
+    }
+
+    public function applyConsistencyFixes($shopId)
+    {
+        $results = $this->consistencyService->runTests($shopId, true);
+        return count($results['fixes']);
     }
 
     protected function applyChanges($changes, $scope, $shopId)

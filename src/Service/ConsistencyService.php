@@ -22,12 +22,12 @@ class ConsistencyService
         $this->stockRepository = new StockRepository();
     }
 
-    public function runTests($id_shop)
+    public function runTests($id_shop, $fix = false)
     {
-        $this->checkStockAvailableConsistency($id_shop);
-        $this->checkNegativeStock($id_shop);
-        $this->checkEquations($id_shop);
-        $this->checkActiveStatus($id_shop);
+        $this->checkStockAvailableConsistency($id_shop, $fix);
+        $this->checkNegativeStock($id_shop, $fix);
+        $this->checkEquations($id_shop, $fix);
+        $this->checkActiveStatus($id_shop, $fix);
         $this->checkEANIntegrity();
 
         return [
@@ -37,7 +37,7 @@ class ConsistencyService
         ];
     }
 
-    protected function checkStockAvailableConsistency($id_shop)
+    protected function checkStockAvailableConsistency($id_shop, $fix)
     {
         $products = $this->stockRepository->getProductsWithAttributes();
         foreach ($products as $row) {
@@ -57,14 +57,18 @@ class ConsistencyService
                         'value_before' => "Q:{$zeroRecord['quantity']}, PQ:{$zeroRecord['physical_quantity']}",
                         'value_corrected' => "Q:{$sums['q']}, PQ:{$sums['pq']}"
                     ];
-                    $this->stockRepository->updateProductAttributeZero($id_product, $sums['q'], $sums['pq'], $sums['rq'], $id_shop);
-                    $this->fixes[] = "Fixed sum for Product ID $id_product";
+                    if ($fix) {
+                        $this->stockRepository->updateProductAttributeZero($id_product, $sums['q'], $sums['pq'], $sums['rq'], $id_shop);
+                        $this->fixes[] = "Fixed sum for Product ID $id_product";
+                    } else {
+                        $this->fixes[] = "Suggested fix for Product ID $id_product";
+                    }
                 }
             }
         }
     }
 
-    protected function checkNegativeStock($id_shop)
+    protected function checkNegativeStock($id_shop, $fix)
     {
         $negatives = $this->stockRepository->getNegatives($id_shop);
         foreach ($negatives as $row) {
@@ -75,12 +79,14 @@ class ConsistencyService
                 'value_before' => "Q:{$row['quantity']}, PQ:{$row['physical_quantity']}",
                 'value_corrected' => "Set to 0"
             ];
-            $this->stockRepository->zeroStock($row['id_product'], $row['id_product_attribute'], $id_shop);
-            $this->fixes[] = "Fixed negative stock for Product ID {$row['id_product']}";
+            if ($fix) {
+                $this->stockRepository->zeroStock($row['id_product'], $row['id_product_attribute'], $id_shop);
+                $this->fixes[] = "Fixed negative stock for Product ID {$row['id_product']}";
+            }
         }
     }
 
-    protected function checkEquations($id_shop)
+    protected function checkEquations($id_shop, $fix)
     {
         $rows = $this->stockRepository->getEquationMismatches($id_shop);
         foreach ($rows as $row) {
@@ -92,12 +98,14 @@ class ConsistencyService
                 'value_before' => "Q:{$row['quantity']} != PQ:{$row['physical_quantity']} - R:{$row['reserved_quantity']}",
                 'value_corrected' => "Q:$expectedQ"
             ];
-            $this->stockRepository->updateQuantity($row['id_product'], $row['id_product_attribute'], $expectedQ, $id_shop);
-            $this->fixes[] = "Fixed equation for Product ID {$row['id_product']}";
+            if ($fix) {
+                $this->stockRepository->updateQuantity($row['id_product'], $row['id_product_attribute'], $expectedQ, $id_shop);
+                $this->fixes[] = "Fixed equation for Product ID {$row['id_product']}";
+            }
         }
     }
 
-    protected function checkActiveStatus($id_shop)
+    protected function checkActiveStatus($id_shop, $fix)
     {
         $rows = $this->stockRepository->getActiveSpecified($id_shop);
         foreach ($rows as $row) {
@@ -109,8 +117,10 @@ class ConsistencyService
                 'value_before' => "Active: 1",
                 'value_corrected' => "Active: 0"
             ];
-            $this->stockRepository->disableProduct($id_product, $id_shop);
-            $this->fixes[] = "Disabled Product ID $id_product due to zero stock";
+            if ($fix) {
+                $this->stockRepository->disableProduct($id_product, $id_shop);
+                $this->fixes[] = "Disabled Product ID $id_product due to zero stock";
+            }
         }
     }
 

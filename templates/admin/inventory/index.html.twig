@@ -41,7 +41,14 @@
             <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.unknown }}" target="_blank">{{ 'Unknown EANs'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
         {% endif %}
         {% if reports_generated.inconsistencies is defined and reports_generated.inconsistencies %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.inconsistencies }}" target="_blank" style="color:red; font-weight:bold;">{{ 'Consistency Issues (Fixed)'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.inconsistencies }}" target="_blank" style="color:red; font-weight:bold;">{{ 'Consistency Issues (Pending Fixes)'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <div style="margin-top: 10px;">
+                <form action="{{ path('admin_updatestock_index') }}" method="post">
+                    <button type="submit" name="submitApplyFixes" class="btn btn-warning" onclick="return confirm('{{ 'Apply suggested fixes to database?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                        <i class="icon-wrench"></i> {{ 'Apply Suggested Fixes'|trans({}, 'Modules.Updatestock.Admin') }}
+                    </button>
+                </form>
+            </div>
         {% endif %}
     </ul>
 </div>
