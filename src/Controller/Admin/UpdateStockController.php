@@ -88,7 +88,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                         mkdir($uploadDir, 0755, true);
 
                     $fp = fopen($uploadDir . $previewReportFile, 'w');
-                    fputcsv($fp, ['Type', 'EAN/ID', 'Name', 'Current Qty', 'New Qty']);
+                    fputcsv($fp, ['Type', 'EAN', 'ID Product', 'ID Attr', 'Name', 'Current Qty', 'New Qty']);
 
                     $stats = [
                         'updated' => count($changes['updated']),
@@ -98,13 +98,13 @@ class UpdateStockController extends FrameworkBundleAdminController
                     ];
 
                     foreach ($changes['updated'] as $item) {
-                        fputcsv($fp, ['UPDATE', $item['ean'], $item['name'], $item['old_qty'], $item['new_qty']]);
+                        fputcsv($fp, ['UPDATE', $item['ean'], $item['id_product'], $item['id_product_attribute'], $item['name'], $item['old_qty'], $item['new_qty']]);
                     }
                     foreach ($changes['zeroed'] as $item) {
-                        fputcsv($fp, ['ZERO', $item['id_product'], $item['name'], $item['old_qty'], 0]);
+                        fputcsv($fp, ['ZERO', '', $item['id_product'], $item['id_product_attribute'], $item['name'], $item['old_qty'], 0]);
                     }
                     foreach ($changes['unknown'] as $ean) {
-                        fputcsv($fp, ['UNKNOWN', $ean, 'N/A', '-', '-']);
+                        fputcsv($fp, ['UNKNOWN', $ean, '', '', 'N/A', '-', '-']);
                     }
                     fclose($fp);
 
