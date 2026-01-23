@@ -17,7 +17,7 @@ class UpdateStock extends Module
     {
         $this->name = 'updatestock';
         $this->tab = 'administration';
-        $this->version = '1.0.8';
+        $this->version = '1.0.9';
         $this->author = 'Vera Technology';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
