@@ -221,6 +221,13 @@
                     <option value="100">100</option>
                 </select>
             </div>
+            <label class="control-label col-lg-2">{{ 'Log Level'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <div class="col-lg-2">
+                <select id="log-level-selector" class="form-control">
+                    <option value="INFO">INFO (Default)</option>
+                    <option value="DEBUG">DEBUG (All)</option>
+                </select>
+            </div>
             <div class="col-lg-7">
                 <span id="log-status" class="help-block"></span>
             </div>
@@ -258,7 +265,12 @@
             .then(response => response.json())
             .then(data => {
                 if (data.log) {
-                    viewer.innerText = data.log.join("\n");
+                    const level = document.getElementById('log-level-selector').value;
+                    const filtered = data.log.filter(line => {
+                        if (level === 'DEBUG') return true;
+                        return !line.includes('[DEBUG]');
+                    });
+                    viewer.innerText = filtered.join("\n");
                     // Auto-scroll to bottom if near bottom? Or always?
                     viewer.scrollTop = viewer.scrollHeight;
                 }

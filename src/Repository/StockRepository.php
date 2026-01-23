@@ -4,6 +4,7 @@ namespace Module\UpdateStock\Repository;
 
 use Db;
 use Product;
+use Module\UpdateStock\Service\LogsService;
 
 class StockRepository
 {
@@ -50,14 +51,17 @@ class StockRepository
                 VALUES (' . (int) $id_product . ', ' . (int) $id_product_attribute . ', ' . (int) $id_shop . ', 0, ' . (int) $finalQty . ', ' . (int) $physicalQty . ', ' . (int) $reserved . ', 0, 2)
                 ON DUPLICATE KEY UPDATE quantity = ' . (int) $finalQty . ', physical_quantity = ' . (int) $physicalQty;
 
+        LogsService::log('Query: ' . $sql, 'DEBUG');
         return $this->db->execute($sql);
     }
 
     public function updateStockGlobal($id_product, $id_product_attribute, $finalQty, $physicalQty)
     {
-        return $this->db->execute('UPDATE ' . _DB_PREFIX_ . 'stock_available 
+        $sql = 'UPDATE ' . _DB_PREFIX_ . 'stock_available 
                                    SET quantity = ' . (int) $finalQty . ', physical_quantity = ' . (int) $physicalQty . '
-                                   WHERE id_product = ' . (int) $id_product . ' AND id_product_attribute = ' . (int) $id_product_attribute);
+                                   WHERE id_product = ' . (int) $id_product . ' AND id_product_attribute = ' . (int) $id_product_attribute;
+        LogsService::log('Query: ' . $sql, 'DEBUG');
+        return $this->db->execute($sql);
     }
 
     public function getProductAttributeSum($id_product, $id_shop = null)
@@ -83,6 +87,9 @@ class StockRepository
             $sql .= ' AND id_shop = ' . (int) $id_shop;
         }
 
+
+
+        LogsService::log('Query: ' . $sql, 'DEBUG');
         return $this->db->execute($sql);
     }
 
@@ -104,12 +111,15 @@ class StockRepository
 
     public function disableProduct($id_product, $id_shop = null)
     {
-        $this->db->execute('UPDATE ' . _DB_PREFIX_ . 'product SET active = 0 WHERE id_product = ' . (int) $id_product);
+        $sql1 = 'UPDATE ' . _DB_PREFIX_ . 'product SET active = 0 WHERE id_product = ' . (int) $id_product;
+        LogsService::log('Query: ' . $sql1, 'DEBUG');
+        $this->db->execute($sql1);
 
         $sql = 'UPDATE ' . _DB_PREFIX_ . 'product_shop SET active = 0 WHERE id_product = ' . (int) $id_product;
         if ($id_shop) {
             $sql .= ' AND id_shop = ' . (int) $id_shop;
         }
+        LogsService::log('Query: ' . $sql, 'DEBUG');
         $this->db->execute($sql);
     }
 
@@ -129,11 +139,13 @@ class StockRepository
 
     public function zeroStock($id_product, $id_pa, $id_shop)
     {
-        return $this->db->execute('UPDATE ' . _DB_PREFIX_ . 'stock_available 
+        $sql = 'UPDATE ' . _DB_PREFIX_ . 'stock_available 
                                    SET quantity = 0, physical_quantity = 0 
                                    WHERE id_product = ' . (int) $id_product . ' 
                                    AND id_product_attribute = ' . (int) $id_pa . ' 
-                                   AND id_shop = ' . (int) $id_shop);
+                                   AND id_shop = ' . (int) $id_shop;
+        LogsService::log('Query: ' . $sql, 'DEBUG');
+        return $this->db->execute($sql);
     }
 
     public function getEquationMismatches($id_shop)
@@ -146,11 +158,13 @@ class StockRepository
 
     public function updateQuantity($id_product, $id_pa, $qty, $id_shop)
     {
-        return $this->db->execute('UPDATE ' . _DB_PREFIX_ . 'stock_available 
+        $sql = 'UPDATE ' . _DB_PREFIX_ . 'stock_available 
                                    SET quantity = ' . (int) $qty . '
                                    WHERE id_product = ' . (int) $id_product . ' 
                                    AND id_product_attribute = ' . (int) $id_pa . ' 
-                                   AND id_shop = ' . (int) $id_shop);
+                                   AND id_shop = ' . (int) $id_shop;
+        LogsService::log('Query: ' . $sql, 'DEBUG');
+        return $this->db->execute($sql);
     }
 
     public function getActiveSpecified($id_shop)
