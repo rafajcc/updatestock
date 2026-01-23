@@ -98,12 +98,15 @@ class StockRepository
         if (empty($ids))
             $ids = '0';
 
-        $sql = 'SELECT id_product, id_product_attribute, quantity, reserved_quantity 
-                FROM ' . _DB_PREFIX_ . 'stock_available 
-                WHERE id_product NOT IN (' . $ids . ')';
+        $sql = 'SELECT sa.id_product, sa.id_product_attribute, sa.quantity, sa.reserved_quantity,
+                       IF(sa.id_product_attribute > 0, pa.ean13, p.ean13) as ean
+                FROM ' . _DB_PREFIX_ . 'stock_available sa
+                LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (sa.id_product = p.id_product)
+                LEFT JOIN ' . _DB_PREFIX_ . 'product_attribute pa ON (sa.id_product_attribute = pa.id_product_attribute)
+                WHERE sa.id_product NOT IN (' . $ids . ')';
 
         if ($id_shop) {
-            $sql .= ' AND id_shop = ' . (int) $id_shop;
+            $sql .= ' AND sa.id_shop = ' . (int) $id_shop;
         }
 
         return $this->db->executeS($sql);

@@ -132,7 +132,7 @@
                 <input type="hidden" name="confirmed_files[]" value="{{ file }}">
             {% endfor %}
             <div class="panel-footer">
-                <button type="submit" name="submitCancel" class="btn btn-default">
+                <button type="submit" name="submitCancel" class="btn btn-warning">
                     <i class="process-icon-cancel"></i> {{ 'Cancel / Reset'|trans({}, 'Modules.Updatestock.Admin') }}
                 </button>
                 <button type="submit" name="submitRunInventory" class="btn btn-success pull-right" onclick="return confirm('{{ 'This will Apply Changes to the database. Are you sure?'|trans({}, 'Modules.Updatestock.Admin') }}');">
