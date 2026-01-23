@@ -42,6 +42,10 @@ class UpdateStockController extends FrameworkBundleAdminController
         $messages = [];
 
         if ($request->isMethod('POST')) {
+            if ($request->request->has('submitCancel')) {
+                return $this->redirectToRoute('admin_updatestock_index');
+            }
+
             if ($request->request->has('submitStockUpload')) {
                 // Upload handling
                 $uploadedFile = $request->files->get('stock_files');
@@ -112,6 +116,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                     return $this->render('@Modules/updatestock/templates/admin/inventory/index.html.twig', [
                         'uploaded_files' => $uploadedFiles,
                         'backup_available' => $backupAvailable,
+                        'available_backups' => $this->backupService->getAvailableBackups(),
                         'preview_mode' => true,
                         'preview_stats' => $stats,
                         'preview_report' => $previewReportFile,

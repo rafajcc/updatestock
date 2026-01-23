@@ -22,37 +22,7 @@
     </form>
 </div>
 
-{% if reports_generated is defined and reports_generated %}
-<div class="panel">
-    <div class="panel-heading">
-        <i class="icon-file-text"></i> {{ 'Execution Reports'|trans({}, 'Modules.Updatestock.Admin') }}
-    </div>
-    <div class="alert alert-success">
-        {{ 'Inventory processed successfully. Download reports below:'|trans({}, 'Modules.Updatestock.Admin') }}
-    </div>
-    <ul>
-        {% if reports_generated.log %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.log }}" target="_blank">{{ 'Inventory Log'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
-        {% endif %}
-        {% if reports_generated.zeroed %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.zeroed }}" target="_blank">{{ 'Zeroed/Disabled Products'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
-        {% endif %}
-        {% if reports_generated.unknown %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.unknown }}" target="_blank">{{ 'Unknown EANs'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
-        {% endif %}
-        {% if reports_generated.inconsistencies is defined and reports_generated.inconsistencies %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.inconsistencies }}" target="_blank" style="color:red; font-weight:bold;">{{ 'Consistency Issues (Pending Fixes)'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
-            <div style="margin-top: 10px;">
-                <form action="{{ path('admin_updatestock_index') }}" method="post">
-                    <button type="submit" name="submitApplyFixes" class="btn btn-warning" onclick="return confirm('{{ 'Apply suggested fixes to database?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                        <i class="icon-wrench"></i> {{ 'Apply Suggested Fixes'|trans({}, 'Modules.Updatestock.Admin') }}
-                    </button>
-                </form>
-            </div>
-        {% endif %}
-    </ul>
-</div>
-{% endif %}
+
 
 <form action="{{ path('admin_updatestock_index') }}" method="post" class="form-horizontal">
     <div class="panel">
@@ -162,9 +132,9 @@
                 <input type="hidden" name="confirmed_files[]" value="{{ file }}">
             {% endfor %}
             <div class="panel-footer">
-                <a href="{{ path('admin_updatestock_index') }}" class="btn btn-default">
+                <button type="submit" name="submitCancel" class="btn btn-default">
                     <i class="process-icon-cancel"></i> {{ 'Cancel / Reset'|trans({}, 'Modules.Updatestock.Admin') }}
-                </a>
+                </button>
                 <button type="submit" name="submitRunInventory" class="btn btn-success pull-right" onclick="return confirm('{{ 'This will Apply Changes to the database. Are you sure?'|trans({}, 'Modules.Updatestock.Admin') }}');">
                     <i class="process-icon-save"></i> {{ 'Confirm & Update Stock'|trans({}, 'Modules.Updatestock.Admin') }}
                 </button>
@@ -172,6 +142,38 @@
         </div>
     {% endif %}
 </form>
+
+{% if reports_generated is defined and reports_generated %}
+<div class="panel">
+    <div class="panel-heading">
+        <i class="icon-file-text"></i> {{ 'Execution Reports'|trans({}, 'Modules.Updatestock.Admin') }}
+    </div>
+    <div class="alert alert-success">
+        {{ 'Inventory processed successfully. Download reports below:'|trans({}, 'Modules.Updatestock.Admin') }}
+    </div>
+    <ul>
+        {% if reports_generated.log %}
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.log }}" target="_blank">{{ 'Inventory Log'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+        {% endif %}
+        {% if reports_generated.zeroed %}
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.zeroed }}" target="_blank">{{ 'Zeroed/Disabled Products'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+        {% endif %}
+        {% if reports_generated.unknown %}
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.unknown }}" target="_blank">{{ 'Unknown EANs'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+        {% endif %}
+        {% if reports_generated.inconsistencies is defined and reports_generated.inconsistencies %}
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.inconsistencies }}" target="_blank" style="color:red; font-weight:bold;">{{ 'Consistency Issues (Pending Fixes)'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <div style="margin-top: 10px;">
+                <form action="{{ path('admin_updatestock_index') }}" method="post">
+                    <button type="submit" name="submitApplyFixes" class="btn btn-warning" onclick="return confirm('{{ 'Apply suggested fixes to database?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                        <i class="icon-wrench"></i> {{ 'Apply Suggested Fixes'|trans({}, 'Modules.Updatestock.Admin') }}
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
 
 <div class="panel">
     <div class="panel-heading">
@@ -219,9 +221,9 @@
         <i class="icon-terminal"></i> {{ 'Live Logs'|trans({}, 'Modules.Updatestock.Admin') }}
     </div>
     <div class="form-horizontal">
-        <div class="form-group">
-            <label class="control-label col-lg-2">{{ 'Show Last Lines'|trans({}, 'Modules.Updatestock.Admin') }}</label>
-            <div class="col-lg-2">
+        <div class="form-group row">
+            <label class="control-label col-lg-2 col-md-2 col-sm-2">{{ 'Show Last Lines'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <div class="col-lg-2 col-md-2 col-sm-4">
                 <select id="log-lines-selector" class="form-control">
                     <option value="0">{{ 'No logs'|trans({}, 'Modules.Updatestock.Admin') }}</option>
                     <option value="10">10</option>
@@ -230,14 +232,14 @@
                     <option value="100">100</option>
                 </select>
             </div>
-            <label class="control-label col-lg-2">{{ 'Log Level'|trans({}, 'Modules.Updatestock.Admin') }}</label>
-            <div class="col-lg-2">
+            <label class="control-label col-lg-2 col-md-2 col-sm-2">{{ 'Log Level'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <div class="col-lg-2 col-md-2 col-sm-4">
                 <select id="log-level-selector" class="form-control">
                     <option value="INFO">INFO (Default)</option>
                     <option value="DEBUG">DEBUG (All)</option>
                 </select>
             </div>
-            <div class="col-lg-4">
+            <div class="col-lg-4 col-md-4 col-sm-12">
                 <span id="log-status" class="help-block" style="margin-top:0;"></span>
             </div>
         </div>
@@ -251,17 +253,37 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const selector = document.getElementById('log-lines-selector');
+        const levelSelector = document.getElementById('log-level-selector');
         const viewerWrapper = document.getElementById('log-container-wrapper');
         const viewer = document.getElementById('log-viewer');
         const status = document.getElementById('log-status');
         let refreshInterval = null;
         const logUrl = "{{ path('admin_updatestock_logs_get') }}";
 
+        // 1. Restore State from LocalStorage
+        const savedLines = localStorage.getItem('updatestock_log_lines');
+        const savedLevel = localStorage.getItem('updatestock_log_level');
+
+        if (savedLevel) {
+            levelSelector.value = savedLevel;
+        }
+        if (savedLines) {
+            selector.value = savedLines;
+            if (savedLines > 0) {
+                viewerWrapper.style.display = 'block';
+                startLogPolling();
+            }
+        }
+
         function fetchLogs() {
             const lines = selector.value;
             if (lines == 0) return;
 
             status.innerText = "{{ 'Refreshing...'|trans({}, 'Modules.Updatestock.Admin') }}";
+
+            // Check scroll position BEFORE updating content
+            // Tolerance of 50px to consider "at bottom"
+            const isAtBottom = (viewer.scrollHeight - viewer.scrollTop - viewer.clientHeight) < 50;
 
             fetch(logUrl, {
                 method: 'POST',
@@ -274,16 +296,12 @@
             .then(response => response.json())
             .then(data => {
                 if (data.log) {
-                    const level = document.getElementById('log-level-selector').value;
+                    const level = levelSelector.value;
                     const filtered = [];
                     let showCurrentBlock = true;
-
-                    // Regex to identify start of a log line: [YYYY-MM-DD
-                    // Modify this if your date format differs
                     const logStartRegex = /^\[\d{4}-\d{2}-\d{2}/;
 
                     data.log.forEach(line => {
-                        // If this is a new log entry, decide visibility
                         if (logStartRegex.test(line)) {
                             if (level === 'INFO' && line.includes('[DEBUG]')) {
                                 showCurrentBlock = false;
@@ -291,15 +309,17 @@
                                 showCurrentBlock = true;
                             }
                         }
-                        
-                        // Add line if current block is visible
                         if (showCurrentBlock) {
                             filtered.push(line);
                         }
                     });
 
                     viewer.innerText = filtered.join("\n");
-                    viewer.scrollTop = viewer.scrollHeight;
+                    
+                    // Only auto-scroll if user was already at the bottom
+                    if (isAtBottom) {
+                        viewer.scrollTop = viewer.scrollHeight;
+                    }
                 }
                 status.innerText = "{{ 'Last update:'|trans({}, 'Modules.Updatestock.Admin') }} " + new Date().toLocaleTimeString();
             })
@@ -309,17 +329,31 @@
             });
         }
 
+        function startLogPolling() {
+            fetchLogs(); // Initial fetch
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(fetchLogs, 5000);
+        }
+
         selector.addEventListener('change', function() {
             const lines = this.value;
+            localStorage.setItem('updatestock_log_lines', lines); // Save state
+            
             if (lines > 0) {
                 viewerWrapper.style.display = 'block';
-                fetchLogs(); // Initial fetch
-                if (refreshInterval) clearInterval(refreshInterval);
-                refreshInterval = setInterval(fetchLogs, 5000); // 5 seconds
+                startLogPolling();
             } else {
                 viewerWrapper.style.display = 'none';
                 if (refreshInterval) clearInterval(refreshInterval);
                 status.innerText = "";
+            }
+        });
+
+        levelSelector.addEventListener('change', function() {
+            localStorage.setItem('updatestock_log_level', this.value); // Save state
+            // If logs are active, refresh immediately to show new level
+            if (selector.value > 0) {
+                fetchLogs();
             }
         });
 
