@@ -143,6 +143,7 @@
             <div class="panel-body">
                 <p><strong>{{ 'Analysis Summary:'|trans({}, 'Modules.Updatestock.Admin') }}</strong></p>
                 <ul>
+                    <li><strong>{{ 'Files:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {{ selected_files|join(', ') }}</li>
                     <li><strong>{{ 'Scope:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {% if inventory_scope == 'multi' %}{{ 'All Shops'|trans({}, 'Modules.Updatestock.Admin') }}{% else %}{{ 'Current Shop Only'|trans({}, 'Modules.Updatestock.Admin') }}{% endif %}</li>
                     <li><strong>{{ 'Type:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {% if total_inventory %}{{ 'Total Inventory'|trans({}, 'Modules.Updatestock.Admin') }}{% else %}{{ 'Partial Inventory'|trans({}, 'Modules.Updatestock.Admin') }}{% endif %}</li>
                     <li>{{ 'Products to Update:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.updated }}</span></li>
