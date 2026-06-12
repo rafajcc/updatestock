@@ -93,17 +93,28 @@ class StockRepository
         return $this->db->execute($sql);
     }
 
-    public function getProductsNotIn($ids, $id_shop = null)
+    public function getStockNotInProcessed(array $processedStock, $id_shop = null)
     {
-        if (empty($ids))
-            $ids = '0';
-
-        $sql = 'SELECT sa.id_product, sa.id_product_attribute, sa.quantity, sa.reserved_quantity,
+        $sql = 'SELECT sa.id_product, sa.id_product_attribute, sa.quantity, sa.physical_quantity, sa.reserved_quantity,
                        IF(sa.id_product_attribute > 0, pa.ean13, p.ean13) as ean
                 FROM ' . _DB_PREFIX_ . 'stock_available sa
                 LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (sa.id_product = p.id_product)
                 LEFT JOIN ' . _DB_PREFIX_ . 'product_attribute pa ON (sa.id_product_attribute = pa.id_product_attribute)
-                WHERE sa.id_product NOT IN (' . $ids . ')';
+                WHERE (
+                    sa.id_product_attribute > 0
+                    OR NOT EXISTS (
+                        SELECT 1 FROM ' . _DB_PREFIX_ . 'product_attribute pa_exists
+                        WHERE pa_exists.id_product = sa.id_product
+                    )
+                )';
+
+        if (!empty($processedStock)) {
+            $pairs = [];
+            foreach ($processedStock as $item) {
+                $pairs[] = '(' . (int) $item['id_product'] . ', ' . (int) $item['id_product_attribute'] . ')';
+            }
+            $sql .= ' AND (sa.id_product, sa.id_product_attribute) NOT IN (' . implode(',', $pairs) . ')';
+        }
 
         if ($id_shop) {
             $sql .= ' AND sa.id_shop = ' . (int) $id_shop;

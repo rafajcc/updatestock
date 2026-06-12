@@ -83,7 +83,7 @@ class StockUpdateService
         }
 
         $report = ['updated' => [], 'unknown' => [], 'zeroed' => [], 'disabled' => []];
-        $processedProducts = [];
+        $processedStock = [];
 
         // 1. Calculate Updates
         foreach ($inventoryData as $ean => $newQty) {
@@ -99,7 +99,10 @@ class StockUpdateService
 
             $id_product = (int) $result['id_product'];
             $id_product_attribute = (int) $result['id_product_attribute'];
-            $processedProducts[$id_product] = true;
+            $processedStock[] = [
+                'id_product' => $id_product,
+                'id_product_attribute' => $id_product_attribute,
+            ];
 
             $currentStock = $this->stockRepository->getCurrentStock($id_product, $id_product_attribute, ($scope === 'single' ? $shopId : null));
             $oldQty = $currentStock ? (int) $currentStock['quantity'] : 0;
@@ -123,10 +126,12 @@ class StockUpdateService
             ];
         }
 
-        // 2. Calculate Zeroes
+        // 2. Calculate Zeroes (per EAN/combination, not whole product id)
         if ($totalInventory) {
-            $ids = implode(',', array_keys($processedProducts));
-            $rows = $this->stockRepository->getProductsNotIn($ids, ($scope === 'single' ? $shopId : null));
+            $rows = $this->stockRepository->getStockNotInProcessed(
+                $processedStock,
+                ($scope === 'single' ? $shopId : null)
+            );
 
             if ($rows) {
                 foreach ($rows as $row) {
@@ -213,14 +218,6 @@ class StockUpdateService
             }
         }
 
-        // Sync attributes zero
-        $processedProducts = [];
-        foreach ($changes['updated'] as $item)
-            $processedProducts[$item['id_product']] = true;
-        foreach (array_keys($processedProducts) as $id_p) {
-            $this->updateProductAttributeZero($id_p, $scope, $shopId);
-        }
-
         // Apply Zeroes
         foreach ($changes['zeroed'] as $item) {
             if ($scope === 'single') {
@@ -228,6 +225,18 @@ class StockUpdateService
             } else {
                 $this->stockRepository->updateStockGlobal($item['id_product'], $item['id_product_attribute'], $item['new_qty'], 0);
             }
+        }
+
+        // Sync parent stock row (id_product_attribute = 0) after updates and zeroes
+        $productsToSync = [];
+        foreach ($changes['updated'] as $item) {
+            $productsToSync[$item['id_product']] = true;
+        }
+        foreach ($changes['zeroed'] as $item) {
+            $productsToSync[$item['id_product']] = true;
+        }
+        foreach (array_keys($productsToSync) as $id_p) {
+            $this->updateProductAttributeZero($id_p, $scope, $shopId);
         }
 
         // Apply Disabled
