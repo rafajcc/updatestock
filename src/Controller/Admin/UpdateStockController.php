@@ -159,11 +159,9 @@ class UpdateStockController extends FrameworkBundleAdminController
                 $backupFile = $request->request->get('backup_filename');
                 if ($backupFile) {
                     if ($this->backupService->restoreBackup($backupFile)) {
-                        LogsService::log('Backup restored successfully: ' . $backupFile);
                         $this->addFlash('success', 'Backup ' . $backupFile . ' restored successfully');
                     } else {
-                        LogsService::log('Failed to restore backup: ' . $backupFile, 'ERROR');
-                        $this->addFlash('error', 'Failed to restore backup');
+                        $this->addFlash('error', 'Failed to restore backup. Check updatestock.log for details.');
                     }
                 }
             }
