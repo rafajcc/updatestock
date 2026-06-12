@@ -90,7 +90,10 @@ class StockUpdateService
             $result = $this->stockRepository->getProductByEan($ean);
 
             if (!$result) {
-                $report['unknown'][] = $ean;
+                $report['unknown'][] = [
+                    'ean' => $ean,
+                    'count' => $newQty
+                ];
                 continue;
             }
 
@@ -133,11 +136,23 @@ class StockUpdateService
 
                     if ($row['quantity'] != $newQty || $row['physical_quantity'] != 0) {
                         $productName = Product::getProductName($id_product, $id_pa);
-                        $item = ['id_product' => $id_product, 'id_product_attribute' => $id_pa, 'name' => $productName, 'old_qty' => $row['quantity'], 'new_qty' => $newQty, 'reserved' => $row['reserved_quantity']];
+                        $item = [
+                            'id_product' => $id_product,
+                            'id_product_attribute' => $id_pa,
+                            'ean' => $row['ean'],
+                            'name' => $productName,
+                            'old_qty' => $row['quantity'],
+                            'new_qty' => $newQty,
+                            'reserved' => $row['reserved_quantity']
+                        ];
                         $report['zeroed'][] = $item;
 
                         if ($id_pa == 0 && $newQty <= 0) {
-                            $report['disabled'][] = ['id_product' => $id_product, 'name' => $productName];
+                            $report['disabled'][] = [
+                                'id_product' => $id_product,
+                                'ean' => $row['ean'],
+                                'name' => $productName
+                            ];
                         }
                     }
                 }
@@ -252,26 +267,26 @@ class StockUpdateService
         $reports['log'] = 'inventory_log_' . $timestamp . '.csv';
 
         $fp = fopen($outputDir . 'zeroed_disabled_' . $timestamp . '.csv', 'w');
-        fputcsv($fp, ['ID Product', 'Product Name', 'Status']);
+        fputcsv($fp, ['EAN', 'ID Product', 'Product Name', 'Status']);
         foreach ($data['zeroed'] as $row)
-            fputcsv($fp, [$row['id_product'], $row['name'], 'Set to 0']);
+            fputcsv($fp, [$row['ean'], $row['id_product'], $row['name'], 'Set to 0']);
         foreach ($data['disabled'] as $row)
-            fputcsv($fp, [$row['id_product'], $row['name'], 'Disabled']);
+            fputcsv($fp, [$row['ean'], $row['id_product'], $row['name'], 'Disabled']);
         fclose($fp);
         $reports['zeroed'] = 'zeroed_disabled_' . $timestamp . '.csv';
 
         $fp = fopen($outputDir . 'unknown_eans_' . $timestamp . '.csv', 'w');
-        fputcsv($fp, ['EAN']);
-        foreach ($data['unknown'] as $ean)
-            fputcsv($fp, [$ean]);
+        fputcsv($fp, ['EAN', 'Times Scanned']);
+        foreach ($data['unknown'] as $row)
+            fputcsv($fp, [$row['ean'], $row['count']]);
         fclose($fp);
         $reports['unknown'] = 'unknown_eans_' . $timestamp . '.csv';
 
         if (!empty($consistencyResults['inconsistencies'])) {
             $fp = fopen($outputDir . 'inconsistencies_' . $timestamp . '.csv', 'w');
-            fputcsv($fp, ['Type', 'ID Product', 'ID Attr', 'Before', 'Correction Suggested']);
+            fputcsv($fp, ['Type', 'EAN', 'ID Product', 'ID Attr', 'Before', 'Correction Suggested']);
             foreach ($consistencyResults['inconsistencies'] as $row)
-                fputcsv($fp, [$row['type'], $row['id_product'], $row['id_product_attribute'], $row['value_before'], $row['value_suggested']]);
+                fputcsv($fp, [$row['type'], $row['ean'], $row['id_product'], $row['id_product_attribute'], $row['value_before'], $row['value_suggested']]);
             fclose($fp);
             $reports['inconsistencies'] = 'inconsistencies_' . $timestamp . '.csv';
         }

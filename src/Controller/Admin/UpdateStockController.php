@@ -105,10 +105,10 @@ class UpdateStockController extends FrameworkBundleAdminController
                         fputcsv($fp, ['UPDATE', $item['ean'], $item['id_product'], $item['id_product_attribute'], $item['name'], $item['old_qty'], $item['new_qty']]);
                     }
                     foreach ($changes['zeroed'] as $item) {
-                        fputcsv($fp, ['ZERO', '', $item['id_product'], $item['id_product_attribute'], $item['name'], $item['old_qty'], 0]);
+                        fputcsv($fp, ['ZERO', $item['ean'], $item['id_product'], $item['id_product_attribute'], $item['name'], $item['old_qty'], 0]);
                     }
-                    foreach ($changes['unknown'] as $ean) {
-                        fputcsv($fp, ['UNKNOWN', $ean, '', '', 'N/A', '-', '-']);
+                    foreach ($changes['unknown'] as $item) {
+                        fputcsv($fp, ['UNKNOWN', $item['ean'], '', '', 'N/A', '-', $item['count']]);
                     }
                     fclose($fp);
 

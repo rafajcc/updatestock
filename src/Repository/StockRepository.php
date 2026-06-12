@@ -129,15 +129,21 @@ class StockRepository
     // Consistency Queries
     public function getProductsWithAttributes()
     {
-        return $this->db->executeS('SELECT id_product FROM ' . _DB_PREFIX_ . 'product_attribute GROUP BY id_product');
+        return $this->db->executeS('SELECT pa.id_product, MAX(p.ean13) as ean 
+                                    FROM ' . _DB_PREFIX_ . 'product_attribute pa 
+                                    LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (pa.id_product = p.id_product)
+                                    GROUP BY pa.id_product');
     }
 
     public function getNegatives($id_shop)
     {
-        return $this->db->executeS('SELECT id_product, id_product_attribute, quantity, physical_quantity 
-                                    FROM ' . _DB_PREFIX_ . 'stock_available 
-                                    WHERE (quantity < 0 OR physical_quantity < 0) 
-                                    AND id_shop = ' . (int) $id_shop);
+        return $this->db->executeS('SELECT sa.id_product, sa.id_product_attribute, sa.quantity, sa.physical_quantity,
+                                           IF(sa.id_product_attribute > 0, pa.ean13, p.ean13) as ean
+                                    FROM ' . _DB_PREFIX_ . 'stock_available sa
+                                    LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (sa.id_product = p.id_product)
+                                    LEFT JOIN ' . _DB_PREFIX_ . 'product_attribute pa ON (sa.id_product_attribute = pa.id_product_attribute)
+                                    WHERE (sa.quantity < 0 OR sa.physical_quantity < 0) 
+                                    AND sa.id_shop = ' . (int) $id_shop);
     }
 
     public function zeroStock($id_product, $id_pa, $id_shop)
@@ -153,10 +159,13 @@ class StockRepository
 
     public function getEquationMismatches($id_shop)
     {
-        return $this->db->executeS('SELECT id_product, id_product_attribute, quantity, physical_quantity, reserved_quantity 
-                                    FROM ' . _DB_PREFIX_ . 'stock_available 
-                                    WHERE quantity != (physical_quantity - reserved_quantity)
-                                    AND id_shop = ' . (int) $id_shop);
+        return $this->db->executeS('SELECT sa.id_product, sa.id_product_attribute, sa.quantity, sa.physical_quantity, sa.reserved_quantity,
+                                           IF(sa.id_product_attribute > 0, pa.ean13, p.ean13) as ean
+                                    FROM ' . _DB_PREFIX_ . 'stock_available sa
+                                    LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (sa.id_product = p.id_product)
+                                    LEFT JOIN ' . _DB_PREFIX_ . 'product_attribute pa ON (sa.id_product_attribute = pa.id_product_attribute)
+                                    WHERE sa.quantity != (sa.physical_quantity - sa.reserved_quantity)
+                                    AND sa.id_shop = ' . (int) $id_shop);
     }
 
     public function updateQuantity($id_product, $id_pa, $qty, $id_shop)
@@ -172,9 +181,10 @@ class StockRepository
 
     public function getActiveSpecified($id_shop)
     {
-        return $this->db->executeS('SELECT sa.id_product 
+        return $this->db->executeS('SELECT sa.id_product, p.ean13 as ean 
                      FROM ' . _DB_PREFIX_ . 'stock_available sa
                      JOIN ' . _DB_PREFIX_ . 'product_shop ps ON sa.id_product = ps.id_product AND sa.id_shop = ps.id_shop
+                     LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (sa.id_product = p.id_product)
                      WHERE sa.id_product_attribute = 0 
                      AND sa.quantity <= 0 
                      AND ps.active = 1

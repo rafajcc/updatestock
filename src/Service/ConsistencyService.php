@@ -52,6 +52,7 @@ class ConsistencyService
                 if ($sums['q'] != $zeroRecord['quantity'] || $sums['pq'] != $zeroRecord['physical_quantity']) {
                     $this->inconsistencies[] = [
                         'type' => 'Sum Mismatch',
+                        'ean' => $row['ean'],
                         'id_product' => $id_product,
                         'id_product_attribute' => 0,
                         'value_before' => "Q:{$zeroRecord['quantity']}, PQ:{$zeroRecord['physical_quantity']}",
@@ -74,6 +75,7 @@ class ConsistencyService
         foreach ($negatives as $row) {
             $this->inconsistencies[] = [
                 'type' => 'Negative Stock',
+                'ean' => $row['ean'],
                 'id_product' => $row['id_product'],
                 'id_product_attribute' => $row['id_product_attribute'],
                 'value_before' => "Q:{$row['quantity']}, PQ:{$row['physical_quantity']}",
@@ -93,6 +95,7 @@ class ConsistencyService
             $expectedQ = (int) $row['physical_quantity'] - (int) $row['reserved_quantity'];
             $this->inconsistencies[] = [
                 'type' => 'Equation Mismatch',
+                'ean' => $row['ean'],
                 'id_product' => $row['id_product'],
                 'id_product_attribute' => $row['id_product_attribute'],
                 'value_before' => "Q:{$row['quantity']} != PQ:{$row['physical_quantity']} - R:{$row['reserved_quantity']}",
@@ -112,6 +115,7 @@ class ConsistencyService
             $id_product = (int) $row['id_product'];
             $this->inconsistencies[] = [
                 'type' => 'Active but No Stock',
+                'ean' => $row['ean'],
                 'id_product' => $id_product,
                 'id_product_attribute' => 0,
                 'value_before' => "Active: 1",
@@ -130,6 +134,7 @@ class ConsistencyService
         foreach ($rows as $row) {
             $this->inconsistencies[] = [
                 'type' => 'Duplicate EAN in DB',
+                'ean' => $row['ean13'],
                 'id_product' => 0,
                 'id_product_attribute' => 0,
                 'value_before' => "EAN: " . $row['ean13'],
