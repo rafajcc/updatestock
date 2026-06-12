@@ -254,10 +254,12 @@ class StockUpdateService
         $reports = [];
 
         $fp = fopen($outputDir . 'inventory_log_' . $timestamp . '.csv', 'w');
-        fputcsv($fp, ['EAN', 'Product Name', 'Quantity Before', 'Quantity After']);
+        fputcsv($fp, ['EAN', 'ID Product', 'ID Product Attribute', 'Product Name', 'Quantity Before', 'Quantity After']);
         foreach ($data['updated'] as $row) {
             fputcsv($fp, [
                 $row['ean'],
+                $row['id_product'],
+                $row['id_product_attribute'],
                 $row['name'],
                 $row['old_qty'],
                 $row['new_prev_qty'] // Physical Quantity
