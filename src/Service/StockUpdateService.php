@@ -77,11 +77,21 @@ class StockUpdateService
 
     public function getInventoryChanges($files, $scope, $shopId, $totalInventory)
     {
+        @set_time_limit(0);
+
         $inventoryData = $this->parseInventoryFiles($files);
         if (empty($inventoryData)) {
             throw new \Exception('No valid data found in selected files.');
         }
 
+        LogsService::log(sprintf(
+            'Analyzing inventory: %d unique EANs, scope=%s, total_inventory=%s',
+            count($inventoryData),
+            $scope,
+            $totalInventory ? 'yes' : 'no'
+        ));
+
+        $id_lang = (int) \Context::getContext()->language->id;
         $report = ['updated' => [], 'unknown' => [], 'zeroed' => [], 'disabled' => []];
         $processedStock = [];
 
@@ -126,42 +136,55 @@ class StockUpdateService
             ];
         }
 
+        LogsService::log(sprintf(
+            'Inventory analysis updates pass done: %d updated, %d unknown, %d processed combinations',
+            count($report['updated']),
+            count($report['unknown']),
+            count($processedStock)
+        ));
+
         // 2. Calculate Zeroes (per EAN/combination, not whole product id)
         if ($totalInventory) {
+            LogsService::log('Inventory analysis zero pass started');
+
             $rows = $this->stockRepository->getStockNotInProcessed(
                 $processedStock,
-                ($scope === 'single' ? $shopId : null)
+                ($scope === 'single' ? $shopId : null),
+                $id_lang
             );
 
-            if ($rows) {
-                foreach ($rows as $row) {
-                    $id_product = (int) $row['id_product'];
-                    $id_pa = (int) $row['id_product_attribute'];
-                    $newQty = 0 - (int) $row['reserved_quantity'];
+            LogsService::log('Inventory analysis zero pass candidates: ' . count($rows));
 
-                    if ($row['quantity'] != $newQty || $row['physical_quantity'] != 0) {
-                        $productName = Product::getProductName($id_product, $id_pa);
-                        $item = [
-                            'id_product' => $id_product,
-                            'id_product_attribute' => $id_pa,
-                            'ean' => $row['ean'],
-                            'name' => $productName,
-                            'old_qty' => $row['quantity'],
-                            'new_qty' => $newQty,
-                            'reserved' => $row['reserved_quantity']
-                        ];
-                        $report['zeroed'][] = $item;
+            foreach ($rows as $row) {
+                $id_product = (int) $row['id_product'];
+                $id_pa = (int) $row['id_product_attribute'];
+                $newQty = 0 - (int) $row['reserved_quantity'];
+                $productName = $row['name'];
 
-                        if ($id_pa == 0 && $newQty <= 0) {
-                            $report['disabled'][] = [
-                                'id_product' => $id_product,
-                                'ean' => $row['ean'],
-                                'name' => $productName
-                            ];
-                        }
-                    }
+                $report['zeroed'][] = [
+                    'id_product' => $id_product,
+                    'id_product_attribute' => $id_pa,
+                    'ean' => $row['ean'],
+                    'name' => $productName,
+                    'old_qty' => $row['quantity'],
+                    'new_qty' => $newQty,
+                    'reserved' => $row['reserved_quantity']
+                ];
+
+                if ($id_pa == 0 && $newQty <= 0) {
+                    $report['disabled'][] = [
+                        'id_product' => $id_product,
+                        'ean' => $row['ean'],
+                        'name' => $productName
+                    ];
                 }
             }
+
+            LogsService::log(sprintf(
+                'Inventory analysis zero pass done: %d to zero, %d to disable',
+                count($report['zeroed']),
+                count($report['disabled'])
+            ));
         }
 
         return $report;
@@ -169,10 +192,16 @@ class StockUpdateService
 
     public function processInventory($files, $scope, $shopId, $totalInventory)
     {
+        @set_time_limit(0);
+
+        LogsService::log('Inventory execution started');
+
         // 1. Create Backup
         if (!$this->backupService->createBackup()) {
             throw new \Exception('Failed to create backup. Inventory execution aborted.');
         }
+
+        LogsService::log('Inventory backup completed, calculating changes');
 
         // 2. Get Changes (Re-calculate to be safe)
         $changes = $this->getInventoryChanges($files, $scope, $shopId, $totalInventory);

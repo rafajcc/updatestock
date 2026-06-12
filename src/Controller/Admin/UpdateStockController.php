@@ -127,7 +127,8 @@ class UpdateStockController extends FrameworkBundleAdminController
                         'module_dir' => _MODULE_DIR_ . 'updatestock/'
                     ]);
 
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
+                    LogsService::log('Preview failed: ' . $e->getMessage(), 'ERROR', true);
                     $this->addFlash('error', $e->getMessage());
                 }
             }
@@ -150,7 +151,8 @@ class UpdateStockController extends FrameworkBundleAdminController
                     } else {
                         $this->addFlash('success', 'Inventory Updated Successfully');
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
+                    LogsService::log('Inventory execution failed: ' . $e->getMessage(), 'ERROR', true);
                     $this->addFlash('error', $e->getMessage());
                 }
             }
