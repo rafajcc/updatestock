@@ -3,16 +3,14 @@
 namespace Module\UpdateStock\Service;
 
 use Db;
+use Context;
 use Module\UpdateStock\Service\LogsService;
 
 class BackupService
 {
     private $moduleDir;
-
     const BACKUP_DIR = 'backups/';
-
-    // Parent tables first so CREATE/INSERT order respects foreign keys during restore.
-    const BACKUP_TABLES = ['product', 'product_shop', 'stock', 'stock_available'];
+    const BACKUP_TABLES = ['stock_available', 'stock', 'product', 'product_shop'];
 
     public function __construct($moduleDir)
     {
@@ -31,79 +29,54 @@ class BackupService
 
     public function createBackup()
     {
-        $content = "-- UpdateStock backup generated at " . date('Y-m-d H:i:s') . "\n";
-        $content .= "SET NAMES utf8mb4;\n";
-        $content .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
-
+        $tables = self::BACKUP_TABLES;
+        $content = '';
         $db = Db::getInstance();
-        $tablesDumped = 0;
-        $totalRows = 0;
 
-        foreach (self::BACKUP_TABLES as $table) {
+        // Validate DB connection and tables exist
+        foreach ($tables as $table) {
             $tableName = _DB_PREFIX_ . $table;
-            $check = $db->executeS("SHOW TABLES LIKE '" . pSQL($tableName) . "'");
+            // Basic sanity check: does table exist?
+            $check = $db->executeS("SHOW TABLES LIKE '$tableName'");
             if (empty($check)) {
-                LogsService::log("Backup skipped missing table: $tableName", 'WARN');
-                continue;
-            }
-
-            $createTable = $db->getRow('SHOW CREATE TABLE `' . bqSQL($tableName) . '`');
-            $createStatement = $this->getCreateTableStatement($createTable);
-            if (!$createStatement) {
-                LogsService::log("Backup could not read CREATE TABLE for: $tableName", 'ERROR');
+                // Warning: Table might not exist (e.g. ps_stock in newer PS versions without ASM). 
+                // We shouldn't fail, just skip or log.
                 continue;
             }
 
             $content .= "DROP TABLE IF EXISTS `$tableName`;\n";
-            $content .= $createStatement . ";\n\n";
-
-            $rows = $db->executeS('SELECT * FROM `' . bqSQL($tableName) . '`');
-            $rowCount = is_array($rows) ? count($rows) : 0;
-            $totalRows += $rowCount;
-
-            if ($rowCount > 0) {
-                foreach ($rows as $row) {
-                    $row = $this->normalizeRow($row);
-                    if (empty($row)) {
-                        continue;
-                    }
-                    $columns = array_keys($row);
-                    $values = array_map([$this, 'sqlValue'], array_values($row));
-                    $content .= 'INSERT INTO `' . $tableName . '` (`' . implode('`, `', $columns) . '`) VALUES (' . implode(', ', $values) . ");\n";
-                }
+            $createTable = $db->getRow("SHOW CREATE TABLE `$tableName`");
+            if ($createTable && isset($createTable['Create Table'])) {
+                $content .= $createTable['Create Table'] . ";\n\n";
             }
 
+            // Dump Data
+            $rows = $db->query("SELECT * FROM `$tableName`");
+            while ($row = $db->nextRow($rows)) {
+                $values = array_map(function ($value) {
+                    if ($value === null)
+                        return 'NULL';
+                    return "'" . pSQL($value, true) . "'";
+                }, $row);
+                $content .= "INSERT INTO `$tableName` VALUES (" . implode(', ', $values) . ");\n";
+            }
             $content .= "\n";
-            $tablesDumped++;
-            LogsService::log("Backup table $tableName: $rowCount rows");
         }
 
-        $content .= "SET FOREIGN_KEY_CHECKS=1;\n";
-
-        if ($tablesDumped === 0) {
-            LogsService::log('Backup aborted: no tables were dumped', 'ERROR');
+        if (empty($content)) {
             return false;
         }
 
         $filename = 'backup_' . date('Ymd_His') . '.sql';
         $fullPath = $this->getBackupDir() . $filename;
-        $write = file_put_contents($fullPath, $content);
 
+        $write = file_put_contents($fullPath, $content);
         if ($write === false || $write < 100) {
-            LogsService::log('Backup write failed or file too small: ' . $fullPath, 'ERROR');
-            if (file_exists($fullPath)) {
+            // < 100 bytes is suspicious for a backup of these tables
+            if (file_exists($fullPath))
                 unlink($fullPath);
-            }
             return false;
         }
-
-        LogsService::log(sprintf(
-            'Backup created: %s (%s, %d tables, %d rows)',
-            $filename,
-            LogsService::getFileSize($fullPath),
-            $tablesDumped,
-            $totalRows
-        ));
 
         return true;
     }
@@ -133,143 +106,89 @@ class BackupService
 
     public function restoreBackup($filename)
     {
-        $safeFilename = basename($filename);
-        $file = $this->getBackupDir() . $safeFilename;
-
-        LogsService::log('Restore started: ' . $safeFilename);
+        $dir = $this->getBackupDir();
+        $file = $dir . basename($filename);
 
         if (!file_exists($file)) {
-            LogsService::log('Restore failed: backup file not found at ' . $file, 'ERROR', true);
             return false;
         }
 
         $sql = file_get_contents($file);
-        if ($sql === false || strlen($sql) < 50) {
-            LogsService::log('Restore failed: backup file is empty or unreadable (' . $safeFilename . ')', 'ERROR', true);
+        if (empty($sql) || strlen($sql) < 50)
             return false;
-        }
 
         $db = Db::getInstance();
         $timestamp = date('YmdHis');
         $renamedTables = [];
 
+        // 1. Safe Rename: Move current tables to safe backup names
         foreach (self::BACKUP_TABLES as $table) {
             $tableName = _DB_PREFIX_ . $table;
-            $exists = $db->executeS("SHOW TABLES LIKE '" . pSQL($tableName) . "'");
-            if (empty($exists)) {
-                LogsService::log("Restore rename skipped missing live table: $tableName", 'WARN');
-                continue;
-            }
-
             $backupName = $tableName . '_bak_' . $timestamp;
-            if ($db->execute('RENAME TABLE `' . bqSQL($tableName) . '` TO `' . bqSQL($backupName) . '`')) {
-                $renamedTables[$tableName] = $backupName;
-                LogsService::log("Restore safety rename: $tableName -> $backupName");
-            } else {
-                LogsService::log(
-                    "Restore failed during safety rename of $tableName: " . $db->getMsgError(),
-                    'ERROR',
-                    true
-                );
-                $this->rollbackRestore($renamedTables);
-                return false;
+
+            // Check if table exists before renaming
+            $exists = $db->executeS("SHOW TABLES LIKE '$tableName'");
+            if (!empty($exists)) {
+                if ($db->execute("RENAME TABLE `$tableName` TO `$backupName`")) {
+                    $renamedTables[$tableName] = $backupName;
+                } else {
+                    // Fail immediately if we can't safe-keep current data
+                    $this->rollbackRestore($renamedTables);
+                    return false;
+                }
             }
         }
 
-        if (empty($renamedTables)) {
-            LogsService::log('Restore failed: no live tables were renamed for rollback safety', 'ERROR', true);
-            return false;
+        // 2. Execute Restore
+        $queries = preg_split('/;\s*[\r\n]+/', $sql);
+        $success = true;
+
+        foreach ($queries as $query) {
+            $query = trim($query);
+            if (!empty($query)) {
+                if (!$db->execute($query)) {
+                    $success = false;
+                    break;
+                }
+            }
         }
 
-        $queries = $this->splitSqlStatements($sql);
-        LogsService::log('Restore executing ' . count($queries) . ' SQL statements from ' . $safeFilename);
-
-        $success = true;
-        $failedQuery = '';
-
-        if (!$db->execute('SET FOREIGN_KEY_CHECKS=0')) {
-            LogsService::log('Restore failed enabling FOREIGN_KEY_CHECKS=0: ' . $db->getMsgError(), 'ERROR', true);
+        // 3. Verify & Finalize
+        if ($success) {
+            // Drop the safe backups we made
+            foreach ($renamedTables as $original => $backup) {
+                $db->execute("DROP TABLE IF EXISTS `$backup`");
+            }
+            return true;
+        } else {
+            // Restore failure: Rollback!
+            // Drop any partial tables created by the failed dump execution
+            foreach (self::BACKUP_TABLES as $table) {
+                $tableName = _DB_PREFIX_ . $table;
+                $db->execute("DROP TABLE IF EXISTS `$tableName`");
+            }
+            // Restore from renamed
             $this->rollbackRestore($renamedTables);
             return false;
         }
-
-        foreach ($queries as $index => $query) {
-            if (!$db->execute($query)) {
-                $success = false;
-                $failedQuery = $this->truncateForLog($query);
-                LogsService::log(
-                    'Restore SQL failed at statement #' . ($index + 1) . ': ' . $db->getMsgError() . ' | ' . $failedQuery,
-                    'ERROR',
-                    true
-                );
-                break;
-            }
-        }
-
-        $db->execute('SET FOREIGN_KEY_CHECKS=1');
-
-        if ($success) {
-            foreach ($renamedTables as $original => $backup) {
-                $db->execute('DROP TABLE IF EXISTS `' . bqSQL($backup) . '`');
-            }
-            LogsService::log('Restore completed successfully: ' . $safeFilename, 'INFO', true);
-            return true;
-        }
-
-        LogsService::log('Restore rolling back after SQL failure in ' . $safeFilename, 'WARN', true);
-
-        foreach (self::BACKUP_TABLES as $table) {
-            $tableName = _DB_PREFIX_ . $table;
-            $db->execute('DROP TABLE IF EXISTS `' . bqSQL($tableName) . '`');
-        }
-
-        if (!$this->rollbackRestore($renamedTables)) {
-            LogsService::log(
-                'Restore rollback failed after SQL error. Manual intervention may be required for tables: ' . implode(', ', array_values($renamedTables)),
-                'CRITICAL',
-                true
-            );
-            return false;
-        }
-
-        LogsService::log('Restore rollback completed for ' . $safeFilename, 'WARN', true);
-        return false;
     }
 
-    private function rollbackRestore(array $renamedTables)
+    private function rollbackRestore($renamedTables)
     {
         $db = Db::getInstance();
-        $db->execute('SET FOREIGN_KEY_CHECKS=0');
-        $ok = true;
-
         foreach ($renamedTables as $original => $backup) {
-            if (!$db->execute('RENAME TABLE `' . bqSQL($backup) . '` TO `' . bqSQL($original) . '`')) {
-                LogsService::log(
-                    "Restore rollback failed renaming $backup back to $original: " . $db->getMsgError(),
-                    'CRITICAL',
-                    true
-                );
-                $ok = false;
-            }
+            $db->execute("RENAME TABLE `$backup` TO `$original`");
         }
-
-        $db->execute('SET FOREIGN_KEY_CHECKS=1');
-        return $ok;
     }
 
     public function deleteBackup($filename)
     {
-        $file = $this->getBackupDir() . basename($filename);
+        $dir = $this->getBackupDir();
+        $file = $dir . basename($filename);
 
         if (file_exists($file)) {
-            $deleted = unlink($file);
-            if ($deleted) {
-                LogsService::log('Backup deleted: ' . basename($filename));
-            }
-            return $deleted;
+            return unlink($file);
         }
-
-        LogsService::log('Backup delete failed: file not found ' . basename($filename), 'WARN');
         return false;
     }
 
@@ -289,76 +208,5 @@ class BackupService
     {
         $files = glob($this->getBackupDir() . 'backup_*.sql');
         return !empty($files);
-    }
-
-    private function getCreateTableStatement(array $createTableRow)
-    {
-        foreach ($createTableRow as $key => $value) {
-            if (stripos((string) $key, 'create') !== false && stripos((string) $key, 'table') !== false) {
-                return rtrim((string) $value, " \t\n\r\0\x0B;");
-            }
-        }
-
-        return null;
-    }
-
-    private function normalizeRow(array $row)
-    {
-        $normalized = [];
-        foreach ($row as $key => $value) {
-            if (is_string($key)) {
-                $normalized[$key] = $value;
-            }
-        }
-
-        return $normalized;
-    }
-
-    private function sqlValue($value)
-    {
-        if ($value === null) {
-            return 'NULL';
-        }
-
-        return "'" . pSQL($value, true) . "'";
-    }
-
-    private function splitSqlStatements($sql)
-    {
-        $statements = [];
-        $current = '';
-
-        foreach (preg_split('/\R/', $sql) as $line) {
-            $trimmed = trim($line);
-            if ($trimmed === '' || strpos($trimmed, '--') === 0) {
-                continue;
-            }
-
-            $current .= $line . "\n";
-            if (preg_match('/;\s*$/', $trimmed)) {
-                $statement = trim($current);
-                if ($statement !== '') {
-                    $statements[] = $statement;
-                }
-                $current = '';
-            }
-        }
-
-        $remaining = trim($current);
-        if ($remaining !== '') {
-            $statements[] = $remaining;
-        }
-
-        return $statements;
-    }
-
-    private function truncateForLog($query, $maxLength = 300)
-    {
-        $query = preg_replace('/\s+/', ' ', trim($query));
-        if (strlen($query) <= $maxLength) {
-            return $query;
-        }
-
-        return substr($query, 0, $maxLength) . '...';
     }
 }
