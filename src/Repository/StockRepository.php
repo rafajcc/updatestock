@@ -93,28 +93,20 @@ class StockRepository
         return $this->db->execute($sql);
     }
 
-    public function getStockNotInProcessed(array $processedStock, $id_shop = null, $id_lang = null)
+    public function getStockNotInProcessed(array $processedStock, $id_shop = null)
     {
-        $langShopSql = $id_shop ? ' AND pl.id_shop = ' . (int) $id_shop : ' AND pl.id_shop = 0';
-
         $sql = 'SELECT sa.id_product, sa.id_product_attribute, sa.quantity, sa.physical_quantity, sa.reserved_quantity,
-                       IF(sa.id_product_attribute > 0, pa.ean13, p.ean13) as ean,
-                       IFNULL(pl.name, CONCAT("Product #", sa.id_product)) as name
+                       IF(sa.id_product_attribute > 0, pa.ean13, p.ean13) as ean
                 FROM ' . _DB_PREFIX_ . 'stock_available sa
                 LEFT JOIN ' . _DB_PREFIX_ . 'product p ON (sa.id_product = p.id_product)
                 LEFT JOIN ' . _DB_PREFIX_ . 'product_attribute pa ON (sa.id_product_attribute = pa.id_product_attribute)
-                LEFT JOIN ' . _DB_PREFIX_ . 'product_lang pl ON (
-                    pl.id_product = sa.id_product
-                    AND pl.id_lang = ' . (int) $id_lang . $langShopSql . '
-                )
                 WHERE (
                     sa.id_product_attribute > 0
                     OR NOT EXISTS (
                         SELECT 1 FROM ' . _DB_PREFIX_ . 'product_attribute pa_exists
                         WHERE pa_exists.id_product = sa.id_product
                     )
-                )
-                AND (sa.physical_quantity != 0 OR sa.quantity != (0 - sa.reserved_quantity))';
+                )';
 
         if (!empty($processedStock)) {
             $pairs = [];
@@ -128,13 +120,7 @@ class StockRepository
             $sql .= ' AND sa.id_shop = ' . (int) $id_shop;
         }
 
-        $result = $this->db->executeS($sql);
-        if ($result === false) {
-            LogsService::log('getStockNotInProcessed query failed: ' . $this->db->getMsgError(), 'ERROR', true);
-            return [];
-        }
-
-        return $result;
+        return $this->db->executeS($sql);
     }
 
     public function disableProduct($id_product, $id_shop = null)
