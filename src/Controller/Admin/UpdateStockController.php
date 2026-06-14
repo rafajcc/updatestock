@@ -4,6 +4,7 @@ namespace Module\UpdateStock\Controller\Admin;
 
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Module\UpdateStock\Service\StockUpdateService;
 use Module\UpdateStock\Service\BackupService;
 use Module\UpdateStock\Service\LogsService;
@@ -295,5 +296,27 @@ class UpdateStockController extends FrameworkBundleAdminController
         }
 
         return unlink($file);
+    }
+
+    public function viewReportAction($filename)
+    {
+        $filename = basename($filename);
+        if (!preg_match('/^[a-zA-Z0-9_.-]+\.csv$/', $filename)) {
+            return new Response('Invalid filename', 400);
+        }
+
+        $path = _PS_MODULE_DIR_ . 'updatestock/uploads/reports/' . $filename;
+        if (!file_exists($path)) {
+            return new Response('File not found', 404);
+        }
+
+        $content = file_get_contents($path);
+
+        $response = new Response($content, 200, [
+            'Content-Type' => 'text/plain; charset=utf-8',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+
+        return $response;
     }
 }

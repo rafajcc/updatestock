@@ -35,6 +35,7 @@
                     <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                     <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                     <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                    <th class="text-right">{{ 'Actions'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,11 +46,19 @@
                             <td>{{ file.name }}</td>
                             <td>{{ file.size }} bytes</td>
                             <td>{{ file.date }}</td>
+                            <td class="text-right">
+                                <a href="{{ module_dir }}temp_files/{{ file.name }}" class="btn btn-default btn-xs" target="_blank">
+                                    <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
+                                <a href="{{ module_dir }}temp_files/{{ file.name }}" class="btn btn-default btn-xs" download="{{ file.name }}">
+                                    <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
+                            </td>
                         </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="4" class="text-center">{{ 'No files uploaded'|trans({}, 'Modules.Updatestock.Admin') }}</td>
+                        <td colspan="5" class="text-center">{{ 'No files uploaded'|trans({}, 'Modules.Updatestock.Admin') }}</td>
                     </tr>
                 {% endif %}
             </tbody>
@@ -211,8 +220,11 @@
                             <td class="text-right">
                                 <form action="{{ path('admin_updatestock_index') }}" method="post" style="display:inline;">
                                     <input type="hidden" name="report_filename" value="{{ report.filename }}">
-                                    <a href="{{ module_dir }}uploads/reports/{{ report.filename }}" class="btn btn-default btn-xs" target="_blank">
+                                    <a href="{{ path('admin_updatestock_view_report', {'filename': report.filename}) }}" class="btn btn-default btn-xs" target="_blank">
                                         <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    </a>
+                                    <a href="{{ module_dir }}uploads/reports/{{ report.filename }}" class="btn btn-default btn-xs" download="{{ report.filename }}">
+                                        <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
                                     </a>
                                     <button type="submit" name="submitDeleteReport" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this report permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
                                         <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
