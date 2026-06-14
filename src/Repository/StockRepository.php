@@ -45,6 +45,53 @@ class StockRepository
         return $this->db->getRow($sql);
     }
 
+    public function getStockRowsByProduct($id_product, $id_shop = null)
+    {
+        $sql = 'SELECT id_product_attribute, quantity, physical_quantity, reserved_quantity
+                FROM ' . _DB_PREFIX_ . 'stock_available
+                WHERE id_product = ' . (int) $id_product;
+
+        if ($id_shop) {
+            $sql .= ' AND id_shop = ' . (int) $id_shop;
+        }
+
+        return $this->db->executeS($sql);
+    }
+
+    public function isProductActive($id_product, $id_shop = null)
+    {
+        if ($id_shop) {
+            $sql = 'SELECT active FROM ' . _DB_PREFIX_ . 'product_shop
+                    WHERE id_product = ' . (int) $id_product . '
+                    AND id_shop = ' . (int) $id_shop;
+            $row = $this->db->getRow($sql);
+
+            return $row && (int) $row['active'] === 1;
+        }
+
+        $sql = 'SELECT IF(p.active = 1 OR MAX(ps.active) = 1, 1, 0) as active
+                FROM ' . _DB_PREFIX_ . 'product p
+                LEFT JOIN ' . _DB_PREFIX_ . 'product_shop ps ON (p.id_product = ps.id_product)
+                WHERE p.id_product = ' . (int) $id_product . '
+                GROUP BY p.id_product, p.active';
+        $row = $this->db->getRow($sql);
+
+        return $row && (int) $row['active'] === 1;
+    }
+
+    public function getProductSummary($id_product)
+    {
+        $sql = 'SELECT p.id_product, p.ean13 as ean, pl.name
+                FROM ' . _DB_PREFIX_ . 'product p
+                LEFT JOIN ' . _DB_PREFIX_ . 'product_lang pl ON (
+                    p.id_product = pl.id_product
+                    AND pl.id_lang = (SELECT MIN(id_lang) FROM ' . _DB_PREFIX_ . 'lang WHERE active = 1)
+                )
+                WHERE p.id_product = ' . (int) $id_product;
+
+        return $this->db->getRow($sql);
+    }
+
     public function updateStock($id_product, $id_product_attribute, $id_shop, $finalQty, $physicalQty, $reserved)
     {
         $sql = 'INSERT INTO ' . _DB_PREFIX_ . 'stock_available (id_product, id_product_attribute, id_shop, id_shop_group, quantity, physical_quantity, reserved_quantity, depends_on_stock, out_of_stock)

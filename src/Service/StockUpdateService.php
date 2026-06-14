@@ -151,18 +151,12 @@ class StockUpdateService
                             'reserved' => $row['reserved_quantity']
                         ];
                         $report['zeroed'][] = $item;
-
-                        if ($id_pa == 0 && $newQty <= 0) {
-                            $report['disabled'][] = [
-                                'id_product' => $id_product,
-                                'ean' => $row['ean'],
-                                'name' => $productName
-                            ];
-                        }
                     }
                 }
             }
         }
+
+        $report['disabled'] = $this->getProductsToDisableAfterInventory($report, $scope, $shopId);
 
         return $report;
     }
@@ -242,7 +236,88 @@ class StockUpdateService
         // Apply Disabled
         foreach ($changes['disabled'] as $item) {
             $this->stockRepository->disableProduct($item['id_product'], ($scope === 'single' ? $shopId : null));
+            LogsService::log('Product disabled after inventory: ID ' . $item['id_product'] . ' (' . $item['name'] . ')');
         }
+    }
+
+    protected function getProductsToDisableAfterInventory(array $changes, $scope, $shopId)
+    {
+        $products = [];
+        foreach ($changes['updated'] as $item) {
+            $products[(int) $item['id_product']] = true;
+        }
+        foreach ($changes['zeroed'] as $item) {
+            $products[(int) $item['id_product']] = true;
+        }
+
+        $disabled = [];
+        foreach (array_keys($products) as $idProduct) {
+            if (!$this->stockRepository->isProductActive($idProduct, ($scope === 'single' ? $shopId : null))) {
+                continue;
+            }
+
+            $projectedStock = $this->getProjectedProductStock($idProduct, $changes, $scope, $shopId);
+            if ($projectedStock > 0) {
+                continue;
+            }
+
+            $summary = $this->stockRepository->getProductSummary($idProduct);
+            $disabled[$idProduct] = [
+                'id_product' => $idProduct,
+                'ean' => $summary && isset($summary['ean']) ? $summary['ean'] : '',
+                'name' => $summary && isset($summary['name']) ? $summary['name'] : Product::getProductName($idProduct),
+                'old_qty' => $this->getCurrentProductTotalStock($idProduct, $scope, $shopId),
+                'new_qty' => $projectedStock,
+            ];
+        }
+
+        return array_values($disabled);
+    }
+
+    protected function getProjectedProductStock($idProduct, array $changes, $scope, $shopId)
+    {
+        $idShop = ($scope === 'single' ? $shopId : null);
+        $stockRows = $this->stockRepository->getStockRowsByProduct($idProduct, $idShop);
+        $hasCombinations = false;
+        $quantities = [];
+
+        foreach ($stockRows as $row) {
+            $idProductAttribute = (int) $row['id_product_attribute'];
+            $quantities[$idProductAttribute] = (int) $row['quantity'];
+            if ($idProductAttribute > 0) {
+                $hasCombinations = true;
+            }
+        }
+
+        foreach ($changes['updated'] as $item) {
+            if ((int) $item['id_product'] === (int) $idProduct) {
+                $quantities[(int) $item['id_product_attribute']] = (int) $item['new_qty'];
+            }
+        }
+        foreach ($changes['zeroed'] as $item) {
+            if ((int) $item['id_product'] === (int) $idProduct) {
+                $quantities[(int) $item['id_product_attribute']] = (int) $item['new_qty'];
+            }
+        }
+
+        if (!$hasCombinations) {
+            return isset($quantities[0]) ? (int) $quantities[0] : 0;
+        }
+
+        $total = 0;
+        foreach ($quantities as $idProductAttribute => $quantity) {
+            if ((int) $idProductAttribute > 0) {
+                $total += (int) $quantity;
+            }
+        }
+
+        return $total;
+    }
+
+    protected function getCurrentProductTotalStock($idProduct, $scope, $shopId)
+    {
+        $currentStock = $this->stockRepository->getCurrentStock($idProduct, 0, ($scope === 'single' ? $shopId : null));
+        return $currentStock ? (int) $currentStock['quantity'] : 0;
     }
 
     protected function updateProductAttributeZero($id_product, $scope, $shopId)
@@ -263,15 +338,38 @@ class StockUpdateService
         $reports = [];
 
         $fp = fopen($outputDir . 'inventory_log_' . $timestamp . '.csv', 'w');
-        fputcsv($fp, ['EAN', 'ID Product', 'ID Product Attribute', 'Product Name', 'Quantity Before', 'Quantity After']);
+        fputcsv($fp, ['Action', 'EAN', 'ID Product', 'ID Product Attribute', 'Product Name', 'Quantity Before', 'Quantity After']);
         foreach ($data['updated'] as $row) {
             fputcsv($fp, [
+                'UPDATE',
                 $row['ean'],
                 $row['id_product'],
                 $row['id_product_attribute'],
                 $row['name'],
                 $row['old_qty'],
                 $row['new_prev_qty'] // Physical Quantity
+            ]);
+        }
+        foreach ($data['zeroed'] as $row) {
+            fputcsv($fp, [
+                'ZERO',
+                $row['ean'],
+                $row['id_product'],
+                $row['id_product_attribute'],
+                $row['name'],
+                $row['old_qty'],
+                0
+            ]);
+        }
+        foreach ($data['disabled'] as $row) {
+            fputcsv($fp, [
+                'DISABLE',
+                $row['ean'],
+                $row['id_product'],
+                0,
+                $row['name'],
+                $row['old_qty'],
+                $row['new_qty']
             ]);
         }
         fclose($fp);

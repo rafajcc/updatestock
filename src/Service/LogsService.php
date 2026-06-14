@@ -9,7 +9,7 @@ namespace Module\UpdateStock\Service;
 class LogsService
 {
 
-    private static $updateStockVersion = "1.0.19";
+    private static $updateStockVersion = "1.0.24";
 
 
     public static function log($message, $severity = 'INFO', $sendToPSLogs = false)
