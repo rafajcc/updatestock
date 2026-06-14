@@ -53,6 +53,9 @@
                                 <a href="{{ module_dir }}temp_files/{{ file.name }}" class="btn btn-default btn-xs" download="{{ file.name }}">
                                     <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
                                 </a>
+                                <a href="{{ path('admin_updatestock_delete_uploaded_file', {'filename': file.name}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this file permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                    <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
                             </td>
                         </tr>
                     {% endfor %}
@@ -199,10 +202,12 @@
         {% endif %}
     </div>
     {% if available_reports is defined and available_reports %}
+        <form id="bulk-reports-form" action="{{ path('admin_updatestock_index') }}" method="post">
         <div style="max-height: 360px; overflow-y: auto;">
             <table class="table">
                 <thead>
                     <tr>
+                        <th width="40"><input type="checkbox" class="checkmeable-reports"></th>
                         <th>{{ 'Type'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                         <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                         <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
@@ -213,29 +218,33 @@
                 <tbody>
                     {% for report in available_reports %}
                         <tr>
+                            <td><input type="checkbox" name="selected_reports[]" value="{{ report.filename }}"></td>
                             <td>{{ report.type }}</td>
                             <td>{{ report.filename }}</td>
                             <td>{{ report.date }}</td>
                             <td>{{ report.size }}</td>
                             <td class="text-right">
-                                <form action="{{ path('admin_updatestock_index') }}" method="post" style="display:inline;">
-                                    <input type="hidden" name="report_filename" value="{{ report.filename }}">
-                                    <a href="{{ path('admin_updatestock_view_report', {'filename': report.filename}) }}" class="btn btn-default btn-xs" target="_blank">
-                                        <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
-                                    </a>
-                                    <a href="{{ module_dir }}uploads/reports/{{ report.filename }}" class="btn btn-default btn-xs" download="{{ report.filename }}">
-                                        <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
-                                    </a>
-                                    <button type="submit" name="submitDeleteReport" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this report permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                        <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
-                                    </button>
-                                </form>
+                                <a href="{{ path('admin_updatestock_view_report', {'filename': report.filename}) }}" class="btn btn-default btn-xs" target="_blank">
+                                    <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
+                                <a href="{{ module_dir }}uploads/reports/{{ report.filename }}" class="btn btn-default btn-xs" download="{{ report.filename }}">
+                                    <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
+                                <a href="{{ path('admin_updatestock_delete_report', {'filename': report.filename}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this report permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                    <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <div style="padding: 10px 0 0 0;">
+            <button type="submit" name="submitDeleteSelectedReports" class="btn btn-danger" onclick="return confirm('{{ 'Delete selected reports permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                <i class="icon-trash"></i> {{ 'Delete Selected Reports'|trans({}, 'Modules.Updatestock.Admin') }}
+            </button>
+        </div>
+        </form>
     {% else %}
         <div class="alert alert-info">{{ 'No reports available.'|trans({}, 'Modules.Updatestock.Admin') }}</div>
     {% endif %}
@@ -251,10 +260,12 @@
         {% endif %}
     </div>
     {% if available_backups is defined and available_backups %}
+        <form id="bulk-backups-form" action="{{ path('admin_updatestock_index') }}" method="post">
         <div style="max-height: 360px; overflow-y: auto;">
             <table class="table">
                 <thead>
                     <tr>
+                        <th width="40"><input type="checkbox" class="checkmeable-backups"></th>
                         <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                         <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
                         <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
@@ -264,25 +275,29 @@
                 <tbody>
                     {% for backup in available_backups %}
                         <tr>
+                            <td><input type="checkbox" name="selected_backups[]" value="{{ backup.filename }}"></td>
                             <td>{{ backup.filename }}</td>
                             <td>{{ backup.date }}</td>
                             <td>{{ backup.size }}</td>
                             <td class="text-right">
-                                 <form action="{{ path('admin_updatestock_index') }}" method="post" style="display:inline;">
-                                    <input type="hidden" name="backup_filename" value="{{ backup.filename }}">
-                                    <button type="submit" name="submitRestoreBackup" class="btn btn-warning btn-xs" onclick="return confirm('{{ 'RESTORE BACKUP? This will overwrite current stock data with this backup version.'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                        <i class="icon-refresh"></i> {{ 'Restore'|trans({}, 'Modules.Updatestock.Admin') }}
-                                    </button>
-                                    <button type="submit" name="submitDeleteBackup" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this backup permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                        <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
-                                    </button>
-                                </form>
+                                <a href="{{ path('admin_updatestock_restore_backup', {'filename': backup.filename}) }}" class="btn btn-warning btn-xs" onclick="return confirm('{{ 'RESTORE BACKUP? This will overwrite current stock data with this backup version.'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                    <i class="icon-refresh"></i> {{ 'Restore'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
+                                <a href="{{ path('admin_updatestock_delete_backup', {'filename': backup.filename}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this backup permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                    <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                </a>
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <div style="padding: 10px 0 0 0;">
+            <button type="submit" name="submitDeleteSelectedBackups" class="btn btn-danger" onclick="return confirm('{{ 'Delete selected backups permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                <i class="icon-trash"></i> {{ 'Delete Selected Backups'|trans({}, 'Modules.Updatestock.Admin') }}
+            </button>
+        </div>
+        </form>
     {% else %}
         <div class="alert alert-info">{{ 'No backups available.'|trans({}, 'Modules.Updatestock.Admin') }}</div>
     {% endif %}
@@ -470,11 +485,27 @@
         if (btnDelete) btnDelete.addEventListener('click', validateFileSelection);
         if (btnPreview) btnPreview.addEventListener('click', validateFileSelection);
 
-        // Select All Checkbox
+        // Select All Checkboxes
         const checkAll = document.querySelector('.checkmeable');
         if (checkAll) {
             checkAll.addEventListener('change', function() {
                 const checkboxes = document.querySelectorAll('input[name="selected_files[]"]');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+        }
+
+        const checkAllReports = document.querySelector('.checkmeable-reports');
+        if (checkAllReports) {
+            checkAllReports.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('input[name="selected_reports[]"]');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+        }
+
+        const checkAllBackups = document.querySelector('.checkmeable-backups');
+        if (checkAllBackups) {
+            checkAllBackups.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('input[name="selected_backups[]"]');
                 checkboxes.forEach(cb => cb.checked = this.checked);
             });
         }

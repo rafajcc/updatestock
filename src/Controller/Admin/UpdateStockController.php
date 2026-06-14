@@ -189,6 +189,21 @@ class UpdateStockController extends FrameworkBundleAdminController
                 }
             }
 
+            if ($request->request->has('submitDeleteSelectedBackups')) {
+                $backupFiles = $request->request->get('selected_backups', []);
+                if (!empty($backupFiles)) {
+                    $count = 0;
+                    foreach ($backupFiles as $bf) {
+                        if ($this->backupService->deleteBackup($bf)) {
+                            $count++;
+                        }
+                    }
+                    LogsService::log("$count backups deleted (bulk)");
+                    $this->addFlash('success', "$count backup(s) deleted");
+                    return $this->redirectToRoute('admin_updatestock_index');
+                }
+            }
+
             if ($request->request->has('submitDeleteReport')) {
                 $reportFile = $request->request->get('report_filename');
                 if ($reportFile) {
@@ -199,6 +214,21 @@ class UpdateStockController extends FrameworkBundleAdminController
                         LogsService::log('Failed to delete report: ' . basename($reportFile), 'ERROR');
                         $this->addFlash('error', 'Failed to delete report');
                     }
+                }
+            }
+
+            if ($request->request->has('submitDeleteSelectedReports')) {
+                $reportFiles = $request->request->get('selected_reports', []);
+                if (!empty($reportFiles)) {
+                    $count = 0;
+                    foreach ($reportFiles as $rf) {
+                        if ($this->deleteReport($reportsDir, $rf)) {
+                            $count++;
+                        }
+                    }
+                    LogsService::log("$count reports deleted (bulk)");
+                    $this->addFlash('success', "$count report(s) deleted");
+                    return $this->redirectToRoute('admin_updatestock_index');
                 }
             }
 
@@ -318,5 +348,51 @@ class UpdateStockController extends FrameworkBundleAdminController
         ]);
 
         return $response;
+    }
+
+    public function deleteSingleUploadedFileAction($filename)
+    {
+        $uploadDir = _PS_MODULE_DIR_ . '/updatestock/temp_files/';
+        $file = $uploadDir . basename($filename);
+        if (file_exists($file)) {
+            unlink($file);
+            LogsService::log('File deleted: ' . basename($filename));
+            $this->addFlash('success', 'File deleted');
+        }
+        return $this->redirectToRoute('admin_updatestock_index');
+    }
+
+    public function deleteSingleReportAction($filename)
+    {
+        $reportsDir = _PS_MODULE_DIR_ . 'updatestock/uploads/reports/';
+        if ($this->deleteReport($reportsDir, $filename)) {
+            LogsService::log('Report deleted: ' . basename($filename));
+            $this->addFlash('success', 'Report deleted');
+        } else {
+            LogsService::log('Failed to delete report: ' . basename($filename), 'ERROR');
+            $this->addFlash('error', 'Failed to delete report');
+        }
+        return $this->redirectToRoute('admin_updatestock_index');
+    }
+
+    public function deleteSingleBackupAction($filename)
+    {
+        if ($this->backupService->deleteBackup($filename)) {
+            LogsService::log('Backup deleted: ' . basename($filename));
+            $this->addFlash('success', 'Backup deleted');
+        }
+        return $this->redirectToRoute('admin_updatestock_index');
+    }
+
+    public function restoreSingleBackupAction($filename)
+    {
+        if ($this->backupService->restoreBackup($filename)) {
+            LogsService::log('Backup restored: ' . basename($filename));
+            $this->addFlash('success', 'Backup restored successfully');
+        } else {
+            LogsService::log('Failed to restore backup: ' . basename($filename), 'ERROR');
+            $this->addFlash('error', 'Failed to restore backup');
+        }
+        return $this->redirectToRoute('admin_updatestock_index');
     }
 }

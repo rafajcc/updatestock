@@ -6,6 +6,34 @@ admin_updatestock_index:
     _legacy_controller: 'UpdateStockController'
     _legacy_link: 'UpdateStockController'
 
+admin_updatestock_delete_uploaded_file:
+  path: /updatestock/uploaded/delete/{filename}
+  methods: [GET]
+  defaults:
+    _controller: 'Module\UpdateStock\Controller\Admin\UpdateStockController::deleteSingleUploadedFileAction'
+    _legacy_controller: 'UpdateStockController'
+
+admin_updatestock_delete_report:
+  path: /updatestock/report/delete/{filename}
+  methods: [GET]
+  defaults:
+    _controller: 'Module\UpdateStock\Controller\Admin\UpdateStockController::deleteSingleReportAction'
+    _legacy_controller: 'UpdateStockController'
+
+admin_updatestock_delete_backup:
+  path: /updatestock/backup/delete/{filename}
+  methods: [GET]
+  defaults:
+    _controller: 'Module\UpdateStock\Controller\Admin\UpdateStockController::deleteSingleBackupAction'
+    _legacy_controller: 'UpdateStockController'
+
+admin_updatestock_restore_backup:
+  path: /updatestock/backup/restore/{filename}
+  methods: [GET]
+  defaults:
+    _controller: 'Module\UpdateStock\Controller\Admin\UpdateStockController::restoreSingleBackupAction'
+    _legacy_controller: 'UpdateStockController'
+
 admin_updatestock_view_report:
   path: /updatestock/report/view/{filename}
   methods: [GET]
