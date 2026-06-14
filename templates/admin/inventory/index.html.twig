@@ -1,6 +1,9 @@
 {% extends 'PrestaShopBundle:Admin:layout.html.twig' %}
 
 {% block content %}
+<style>
+.section-separator { border: 0; border-top: 1px solid #e0e0e0; margin: 24px 0; }
+</style>
 <div class="panel">
     <form action="{{ path('admin_updatestock_index') }}" method="post" enctype="multipart/form-data" class="form-horizontal">
         <div class="form-group">
@@ -18,7 +21,7 @@
     </form>
 </div>
 
-
+<hr class="section-separator">
 
 <form action="{{ path('admin_updatestock_index') }}" method="post" class="form-horizontal">
     <div class="panel">
@@ -52,6 +55,8 @@
             </tbody>
         </table>
     </div>
+
+    <hr class="section-separator">
 
     <div class="panel">
         <div class="panel-heading">
@@ -143,6 +148,8 @@
     {% endif %}
 </form>
 
+<hr class="section-separator">
+
 {% if reports_generated is defined and reports_generated %}
 <div class="panel">
     <div class="panel-heading">
@@ -222,6 +229,8 @@
     {% endif %}
 </div>
 
+<hr class="section-separator">
+
 <div class="panel">
     <div class="panel-heading">
         <i class="icon-time"></i> <strong>{{ 'Backup History'|trans({}, 'Modules.Updatestock.Admin') }}</strong>
@@ -267,6 +276,7 @@
     {% endif %}
 </div>
 
+<hr class="section-separator">
 
 <div class="panel">
     <div class="panel-heading">
