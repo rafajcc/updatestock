@@ -8,17 +8,20 @@ use Symfony\Component\HttpFoundation\Response;
 use Module\UpdateStock\Service\StockUpdateService;
 use Module\UpdateStock\Service\BackupService;
 use Module\UpdateStock\Service\LogsService;
+use Module\UpdateStock\Service\TranslationService;
 
 class UpdateStockController extends FrameworkBundleAdminController
 {
     private $stockUpdateService;
     private $backupService;
+    private $translationService;
 
-    public function __construct(StockUpdateService $stockUpdateService, BackupService $backupService)
+    public function __construct(StockUpdateService $stockUpdateService, BackupService $backupService, TranslationService $translationService)
     {
         parent::__construct();
         $this->stockUpdateService = $stockUpdateService;
         $this->backupService = $backupService;
+        $this->translationService = $translationService;
     }
 
     public function indexAction(Request $request)
@@ -72,7 +75,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                         }
                     }
                 }
-                $this->addFlash('success', 'Files uploaded successfully.');
+                $this->addFlash('success', $this->translationService->translate('Files uploaded successfully.'));
                 return $this->redirectToRoute('admin_updatestock_index');
             }
 
@@ -133,7 +136,8 @@ class UpdateStockController extends FrameworkBundleAdminController
                         'inventory_scope' => $scope,
                         'total_inventory' => $totalInventory,
                         'module_dir' => _MODULE_DIR_ . 'updatestock/',
-                        'module_version' => $moduleVersion
+                        'module_version' => $moduleVersion,
+                        't' => $this->translationService,
                     ]);
 
                 } catch (\Exception $e) {
@@ -156,9 +160,9 @@ class UpdateStockController extends FrameworkBundleAdminController
                     );
                     $reports = $result['reports'];
                     if ($result['consistency']['critical_errors']) {
-                        $this->addFlash('error', 'Critical consistency errors detected!');
+                        $this->addFlash('error', $this->translationService->translate('Critical consistency errors detected!'));
                     } else {
-                        $this->addFlash('success', 'Inventory Updated Successfully');
+                        $this->addFlash('success', $this->translationService->translate('Inventory Updated Successfully'));
                     }
                 } catch (\Exception $e) {
                     LogsService::log('Inventory execution failed: ' . $e->getMessage(), 'ERROR');
@@ -171,10 +175,10 @@ class UpdateStockController extends FrameworkBundleAdminController
                 if ($backupFile) {
                     if ($this->backupService->restoreBackup($backupFile)) {
                         LogsService::log('Backup restored successfully: ' . $backupFile);
-                        $this->addFlash('success', 'Backup ' . $backupFile . ' restored successfully');
+                        $this->addFlash('success', $this->translationService->translate('Backup %backup% restored successfully', ['backup' => $backupFile]));
                     } else {
                         LogsService::log('Failed to restore backup: ' . $backupFile, 'ERROR');
-                        $this->addFlash('error', 'Failed to restore backup');
+                        $this->addFlash('error', $this->translationService->translate('Failed to restore backup'));
                     }
                 }
             }
@@ -184,7 +188,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                 if ($backupFile) {
                     if ($this->backupService->deleteBackup($backupFile)) {
                         LogsService::log('Backup deleted: ' . $backupFile);
-                        $this->addFlash('success', 'Backup deleted');
+                        $this->addFlash('success', $this->translationService->translate('Backup deleted'));
                     }
                 }
             }
@@ -199,7 +203,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                         }
                     }
                     LogsService::log("$count backups deleted (bulk)");
-                    $this->addFlash('success', "$count backup(s) deleted");
+                    $this->addFlash('success', $this->translationService->translate('%count% backup(s) deleted', ['count' => $count]));
                     return $this->redirectToRoute('admin_updatestock_index');
                 }
             }
@@ -209,10 +213,10 @@ class UpdateStockController extends FrameworkBundleAdminController
                 if ($reportFile) {
                     if ($this->deleteReport($reportsDir, $reportFile)) {
                         LogsService::log('Report deleted: ' . basename($reportFile));
-                        $this->addFlash('success', 'Report deleted');
+                        $this->addFlash('success', $this->translationService->translate('Report deleted'));
                     } else {
                         LogsService::log('Failed to delete report: ' . basename($reportFile), 'ERROR');
-                        $this->addFlash('error', 'Failed to delete report');
+                        $this->addFlash('error', $this->translationService->translate('Failed to delete report'));
                     }
                 }
             }
@@ -227,7 +231,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                         }
                     }
                     LogsService::log("$count reports deleted (bulk)");
-                    $this->addFlash('success', "$count report(s) deleted");
+                    $this->addFlash('success', $this->translationService->translate('%count% report(s) deleted', ['count' => $count]));
                     return $this->redirectToRoute('admin_updatestock_index');
                 }
             }
@@ -235,7 +239,7 @@ class UpdateStockController extends FrameworkBundleAdminController
             if ($request->request->has('submitApplyFixes')) {
                 try {
                     $fixCount = $this->stockUpdateService->applyConsistencyFixes((int) $this->getContext()->shop->id);
-                    $this->addFlash('success', "Consistency fixes applied successfully. ($fixCount fixes)");
+                    $this->addFlash('success', $this->translationService->translate('Consistency fixes applied successfully. (%count% fixes)', ['count' => $fixCount]));
                     // Refresh report logic could be here, but redirect is simpler
                     return $this->redirectToRoute('admin_updatestock_index');
                 } catch (\Exception $e) {
@@ -253,7 +257,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                             LogsService::log('File deleted: ' . basename($f));
                         }
                     }
-                    $this->addFlash('success', 'Files deleted');
+                    $this->addFlash('success', $this->translationService->translate('Files deleted'));
                     return $this->redirectToRoute('admin_updatestock_index');
                 }
             }
@@ -266,7 +270,8 @@ class UpdateStockController extends FrameworkBundleAdminController
             'available_reports' => $this->getAvailableReports($reportsDir),
             'reports_generated' => $reports,
             'module_dir' => _MODULE_DIR_ . 'updatestock/',
-            'module_version' => $moduleVersion
+            'module_version' => $moduleVersion,
+            't' => $this->translationService,
         ]);
     }
 
@@ -332,12 +337,12 @@ class UpdateStockController extends FrameworkBundleAdminController
     {
         $filename = basename($filename);
         if (!preg_match('/^[a-zA-Z0-9_.-]+\.csv$/', $filename)) {
-            return new Response('Invalid filename', 400);
+            return new Response($this->translationService->translate('Invalid filename'), 400);
         }
 
         $path = _PS_MODULE_DIR_ . 'updatestock/uploads/reports/' . $filename;
         if (!file_exists($path)) {
-            return new Response('File not found', 404);
+            return new Response($this->translationService->translate('File not found'), 404);
         }
 
         $content = file_get_contents($path);
@@ -357,7 +362,7 @@ class UpdateStockController extends FrameworkBundleAdminController
         if (file_exists($file)) {
             unlink($file);
             LogsService::log('File deleted: ' . basename($filename));
-            $this->addFlash('success', 'File deleted');
+            $this->addFlash('success', $this->translationService->translate('File deleted'));
         }
         return $this->redirectToRoute('admin_updatestock_index');
     }
@@ -367,10 +372,10 @@ class UpdateStockController extends FrameworkBundleAdminController
         $reportsDir = _PS_MODULE_DIR_ . 'updatestock/uploads/reports/';
         if ($this->deleteReport($reportsDir, $filename)) {
             LogsService::log('Report deleted: ' . basename($filename));
-            $this->addFlash('success', 'Report deleted');
+            $this->addFlash('success', $this->translationService->translate('Report deleted'));
         } else {
             LogsService::log('Failed to delete report: ' . basename($filename), 'ERROR');
-            $this->addFlash('error', 'Failed to delete report');
+            $this->addFlash('error', $this->translationService->translate('Failed to delete report'));
         }
         return $this->redirectToRoute('admin_updatestock_index');
     }
@@ -379,7 +384,7 @@ class UpdateStockController extends FrameworkBundleAdminController
     {
         if ($this->backupService->deleteBackup($filename)) {
             LogsService::log('Backup deleted: ' . basename($filename));
-            $this->addFlash('success', 'Backup deleted');
+            $this->addFlash('success', $this->translationService->translate('Backup deleted'));
         }
         return $this->redirectToRoute('admin_updatestock_index');
     }
@@ -388,10 +393,10 @@ class UpdateStockController extends FrameworkBundleAdminController
     {
         if ($this->backupService->restoreBackup($filename)) {
             LogsService::log('Backup restored: ' . basename($filename));
-            $this->addFlash('success', 'Backup restored successfully');
+            $this->addFlash('success', $this->translationService->translate('Backup %backup% restored successfully', ['backup' => basename($filename)]));
         } else {
             LogsService::log('Failed to restore backup: ' . basename($filename), 'ERROR');
-            $this->addFlash('error', 'Failed to restore backup');
+            $this->addFlash('error', $this->translationService->translate('Failed to restore backup'));
         }
         return $this->redirectToRoute('admin_updatestock_index');
     }

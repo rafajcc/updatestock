@@ -7,14 +7,14 @@
 <div class="panel">
     <form action="{{ path('admin_updatestock_index') }}" method="post" enctype="multipart/form-data" class="form-horizontal">
         <div class="form-group">
-            <label class="control-label col-lg-3"><strong>{{ 'Select File(s)'|trans({}, 'Modules.Updatestock.Admin') }}</strong></label>
+            <label class="control-label col-lg-3"><strong>{{ t.translate('Select File(s)') }}</strong></label>
             <div class="col-lg-6">
                 <input type="file" name="stock_files[]" multiple accept=".txt" class="form-control">
-                <p class="help-block">{{ 'Format: EAN;;;;; (txt files only)'|trans({}, 'Modules.Updatestock.Admin') }}</p>
+                <p class="help-block">{{ t.translate('Format: EAN;;;;; (txt files only)') }}</p>
             </div>
             <div class="col-lg-3">
                 <button type="submit" name="submitStockUpload" class="btn btn-primary">
-                    <i class="process-icon-save"></i> {{ 'Upload'|trans({}, 'Modules.Updatestock.Admin') }}
+                    <i class="process-icon-save"></i> {{ t.translate('Upload') }}
                 </button>
             </div>
         </div>
@@ -26,16 +26,16 @@
 <form action="{{ path('admin_updatestock_index') }}" method="post" class="form-horizontal">
     <div class="panel">
         <div class="panel-heading">
-            <i class="icon-list"></i> <strong>{{ 'Uploaded Files'|trans({}, 'Modules.Updatestock.Admin') }}</strong>
+            <i class="icon-list"></i> <strong>{{ t.translate('Uploaded Files') }}</strong>
         </div>
         <table class="table table-striped">
             <thead>
                 <tr>
                     <th width="40"><input type="checkbox" name="checkmeable" class="checkmeable"></th>
-                    <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                    <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                    <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                    <th class="text-right">{{ 'Actions'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                    <th>{{ t.translate('Filename') }}</th>
+                    <th>{{ t.translate('Size') }}</th>
+                    <th>{{ t.translate('Date') }}</th>
+                    <th class="text-right">{{ t.translate('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,20 +48,20 @@
                             <td>{{ file.date }}</td>
                             <td class="text-right">
                                 <a href="{{ module_dir }}temp_files/{{ file.name }}" class="btn btn-default btn-xs" target="_blank">
-                                    <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    <i class="icon-eye-open"></i> {{ t.translate('View') }}
                                 </a>
                                 <a href="{{ module_dir }}temp_files/{{ file.name }}" class="btn btn-default btn-xs" download="{{ file.name }}">
-                                    <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    <i class="icon-download"></i> {{ t.translate('Download') }}
                                 </a>
-                                <a href="{{ path('admin_updatestock_delete_uploaded_file', {'filename': file.name}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this file permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                    <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                <a href="{{ path('admin_updatestock_delete_uploaded_file', {'filename': file.name}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ t.translate('Delete this file permanently?') }}');">
+                                    <i class="icon-trash"></i> {{ t.translate('Delete') }}
                                 </a>
                             </td>
                         </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="5" class="text-center">{{ 'No files uploaded'|trans({}, 'Modules.Updatestock.Admin') }}</td>
+                        <td colspan="5" class="text-center">{{ t.translate('No files uploaded') }}</td>
                     </tr>
                 {% endif %}
             </tbody>
@@ -72,41 +72,41 @@
 
     <div class="panel">
         <div class="panel-heading">
-             <i class="icon-cogs"></i> <strong>{{ 'Analysis Configuration & Actions'|trans({}, 'Modules.Updatestock.Admin') }}</strong>
+             <i class="icon-cogs"></i> <strong>{{ t.translate('Analysis Configuration & Actions') }}</strong>
         </div>
         
         <div class="form-group">
-            <label class="control-label col-lg-3"><strong>{{ 'Inventory Scope'|trans({}, 'Modules.Updatestock.Admin') }}</strong></label>
+            <label class="control-label col-lg-3"><strong>{{ t.translate('Inventory Scope') }}</strong></label>
             <div class="col-lg-9">
                 <div class="radio">
                     <label>
                         <input type="radio" name="inventory_scope" value="single" {% if inventory_scope is defined and inventory_scope == 'single' %}checked{% elseif inventory_scope is not defined %}checked{% endif %}>
-                        {{ 'Current Shop Only'|trans({}, 'Modules.Updatestock.Admin') }}
+                        {{ t.translate('Current Shop Only') }}
                     </label>
                 </div>
                 <div class="radio">
                     <label>
                         <input type="radio" name="inventory_scope" value="multi" {% if inventory_scope is defined and inventory_scope == 'multi' %}checked{% endif %}>
-                        {{ 'All Shops (Multistore)'|trans({}, 'Modules.Updatestock.Admin') }}
+                        {{ t.translate('All Shops (Multistore)') }}
                         <span id="multistore-beta-label" class="label label-warning" style="margin-left: 6px; display:none;">Beta</span>
                     </label>
                     <p id="multistore-beta-warning" class="help-block text-danger" style="margin-left: 20px; display:none;">
-                        {{ 'Beta feature: not recommended for regular use. Please contact the administrator before using it.'|trans({}, 'Modules.Updatestock.Admin') }}
+                        {{ t.translate('Beta feature: not recommended for regular use. Please contact the administrator before using it.') }}
                     </p>
                 </div>
             </div>
         </div>
 
         <div class="form-group">
-             <label class="control-label col-lg-3"><strong>{{ 'Options'|trans({}, 'Modules.Updatestock.Admin') }}</strong></label>
+             <label class="control-label col-lg-3"><strong>{{ t.translate('Options') }}</strong></label>
              <div class="col-lg-9">
                 <div class="checkbox">
                     <label>
                         <input type="checkbox" id="total-inventory-checkbox" name="total_inventory" value="1" {% if total_inventory is defined and total_inventory %}checked{% endif %}>
-                         {{ 'Total Inventory (Set missing products to 0)'|trans({}, 'Modules.Updatestock.Admin') }}
+                         {{ t.translate('Total Inventory (Set missing products to 0)') }}
                     </label>
                     <p id="total-inventory-warning" class="help-block text-danger" style="display:none;">
-                         {{ 'Warning: Products not found in the uploaded files will be set to quantity 0.'|trans({}, 'Modules.Updatestock.Admin') }}
+                         {{ t.translate('Warning: Products not found in the uploaded files will be set to quantity 0.') }}
                     </p>
                 </div>
              </div>
@@ -114,10 +114,10 @@
 
         <div class="panel-footer">
             <button type="submit" name="submitDeleteFiles" class="btn btn-danger">
-                <i class="process-icon-delete"></i> {{ 'Delete Selected Files'|trans({}, 'Modules.Updatestock.Admin') }}
+                <i class="process-icon-delete"></i> {{ t.translate('Delete Selected Files') }}
             </button>
             <button type="submit" name="submitPreview" class="btn btn-primary pull-right">
-                <i class="process-icon-search"></i> {{ 'Analyze & Preview'|trans({}, 'Modules.Updatestock.Admin') }}
+                <i class="process-icon-search"></i> {{ t.translate('Analyze & Preview') }}
             </button>
         </div>
     </div>
@@ -125,23 +125,23 @@
     {% if preview_mode is defined and preview_mode %}
         <div class="panel panel-info">
             <div class="panel-heading">
-                <i class="icon-search"></i> {{ 'Preview Results'|trans({}, 'Modules.Updatestock.Admin') }}
+                <i class="icon-search"></i> {{ t.translate('Preview Results') }}
             </div>
             <div class="panel-body">
-                <p><strong>{{ 'Analysis Summary:'|trans({}, 'Modules.Updatestock.Admin') }}</strong></p>
+                <p><strong>{{ t.translate('Analysis Summary:') }}</strong></p>
                 <ul>
-                    <li><strong>{{ 'Files:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {{ selected_files|join(', ') }}</li>
-                    <li><strong>{{ 'Scope:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {% if inventory_scope == 'multi' %}{{ 'All Shops'|trans({}, 'Modules.Updatestock.Admin') }}{% else %}{{ 'Current Shop Only'|trans({}, 'Modules.Updatestock.Admin') }}{% endif %}</li>
-                    <li><strong>{{ 'Type:'|trans({}, 'Modules.Updatestock.Admin') }}</strong> {% if total_inventory %}{{ 'Total Inventory'|trans({}, 'Modules.Updatestock.Admin') }}{% else %}{{ 'Partial Inventory'|trans({}, 'Modules.Updatestock.Admin') }}{% endif %}</li>
-                    <li>{{ 'Products to Update:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.updated }}</span></li>
-                    <li>{{ 'Products to Zero (Total Inventory):'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.zeroed }}</span></li>
-                    <li>{{ 'Products to Disable:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge">{{ preview_stats.disabled }}</span></li>
-                    <li>{{ 'Unknown EANs:'|trans({}, 'Modules.Updatestock.Admin') }} <span class="badge badge-warning">{{ preview_stats.unknown }}</span></li>
+                    <li><strong>{{ t.translate('Files:') }}</strong> {{ selected_files|join(', ') }}</li>
+                    <li><strong>{{ t.translate('Scope:') }}</strong> {% if inventory_scope == 'multi' %}{{ t.translate('All Shops') }}{% else %}{{ t.translate('Current Shop Only') }}{% endif %}</li>
+                    <li><strong>{{ t.translate('Type:') }}</strong> {% if total_inventory %}{{ t.translate('Total Inventory') }}{% else %}{{ t.translate('Partial Inventory') }}{% endif %}</li>
+                    <li>{{ t.translate('Products to Update:') }} <span class="badge">{{ preview_stats.updated }}</span></li>
+                    <li>{{ t.translate('Products to Zero (Total Inventory):') }} <span class="badge">{{ preview_stats.zeroed }}</span></li>
+                    <li>{{ t.translate('Products to Disable:') }} <span class="badge">{{ preview_stats.disabled }}</span></li>
+                    <li>{{ t.translate('Unknown EANs:') }} <span class="badge badge-warning">{{ preview_stats.unknown }}</span></li>
                 </ul>
                 <hr>
-                <p><a href="{{ module_dir }}uploads/reports/{{ preview_report }}" class="btn btn-default" target="_blank"><i class="icon-download"></i> {{ 'Download Detailed Preview CSV'|trans({}, 'Modules.Updatestock.Admin') }}</a></p>
+                <p><a href="{{ module_dir }}uploads/reports/{{ preview_report }}" class="btn btn-default" target="_blank"><i class="icon-download"></i> {{ t.translate('Download Detailed Preview CSV') }}</a></p>
                 <div class="alert alert-warning">
-                    {{ 'Please review the preview CSV above content carefully. If everything looks correct, click "Confirm & Update" below.'|trans({}, 'Modules.Updatestock.Admin') }}
+                    {{ t.translate('Please review the preview CSV above content carefully. If everything looks correct, click "Confirm & Update" below.') }}
                 </div>
             </div>
             {# Persist selections for final submission #}
@@ -150,10 +150,10 @@
             {% endfor %}
             <div class="panel-footer">
                 <button type="submit" name="submitCancel" class="btn btn-warning">
-                    <i class="process-icon-cancel"></i> {{ 'Cancel / Reset'|trans({}, 'Modules.Updatestock.Admin') }}
+                    <i class="process-icon-cancel"></i> {{ t.translate('Cancel / Reset') }}
                 </button>
-                <button type="submit" name="submitRunInventory" class="btn btn-success pull-right" onclick="return confirm('{{ 'This will Apply Changes to the database. Are you sure?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                    <i class="process-icon-save"></i> {{ 'Confirm & Update Stock'|trans({}, 'Modules.Updatestock.Admin') }}
+                <button type="submit" name="submitRunInventory" class="btn btn-success pull-right" onclick="return confirm('{{ t.translate('This will Apply Changes to the database. Are you sure?') }}');">
+                    <i class="process-icon-save"></i> {{ t.translate('Confirm & Update Stock') }}
                 </button>
             </div>
         </div>
@@ -165,27 +165,27 @@
 {% if reports_generated is defined and reports_generated %}
 <div class="panel">
     <div class="panel-heading">
-        <i class="icon-file-text"></i> {{ 'Execution Reports'|trans({}, 'Modules.Updatestock.Admin') }}
+        <i class="icon-file-text"></i> {{ t.translate('Execution Reports') }}
     </div>
     <div class="alert alert-success">
-        {{ 'Inventory processed successfully. Download reports below:'|trans({}, 'Modules.Updatestock.Admin') }}
+        {{ t.translate('Inventory processed successfully. Download reports below:') }}
     </div>
     <ul>
         {% if reports_generated.log %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.log }}" target="_blank">{{ 'Inventory Log'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.log }}" target="_blank">{{ t.translate('Inventory Log') }}</a></li>
         {% endif %}
         {% if reports_generated.zeroed %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.zeroed }}" target="_blank">{{ 'Zeroed/Disabled Products'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.zeroed }}" target="_blank">{{ t.translate('Zeroed/Disabled Products') }}</a></li>
         {% endif %}
         {% if reports_generated.unknown %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.unknown }}" target="_blank">{{ 'Unknown EANs'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.unknown }}" target="_blank">{{ t.translate('Unknown EANs') }}</a></li>
         {% endif %}
         {% if reports_generated.inconsistencies is defined and reports_generated.inconsistencies %}
-            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.inconsistencies }}" target="_blank" style="color:red; font-weight:bold;">{{ 'Consistency Issues (Pending Fixes)'|trans({}, 'Modules.Updatestock.Admin') }}</a></li>
+            <li><a href="{{ module_dir }}uploads/reports/{{ reports_generated.inconsistencies }}" target="_blank" style="color:red; font-weight:bold;">{{ t.translate('Consistency Issues (Pending Fixes)') }}</a></li>
             <div style="margin-top: 10px;">
                 <form action="{{ path('admin_updatestock_index') }}" method="post">
-                    <button type="submit" name="submitApplyFixes" class="btn btn-warning" onclick="return confirm('{{ 'Apply suggested fixes to database?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                        <i class="icon-wrench"></i> {{ 'Apply Suggested Fixes'|trans({}, 'Modules.Updatestock.Admin') }}
+                    <button type="submit" name="submitApplyFixes" class="btn btn-warning" onclick="return confirm('{{ t.translate('Apply suggested fixes to database?') }}');">
+                        <i class="icon-wrench"></i> {{ t.translate('Apply Suggested Fixes') }}
                     </button>
                 </form>
             </div>
@@ -196,7 +196,7 @@
 
 <div class="panel">
     <div class="panel-heading">
-        <i class="icon-file-text"></i> <strong>{{ 'Report History'|trans({}, 'Modules.Updatestock.Admin') }}</strong>
+        <i class="icon-file-text"></i> <strong>{{ t.translate('Report History') }}</strong>
         {% if available_reports is defined and available_reports %}
             <span class="badge">{{ available_reports|length }}</span>
         {% endif %}
@@ -208,30 +208,30 @@
                 <thead>
                     <tr>
                         <th width="40"><input type="checkbox" class="checkmeable-reports"></th>
-                        <th>{{ 'Type'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th class="text-right">{{ 'Actions'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                        <th>{{ t.translate('Type') }}</th>
+                        <th>{{ t.translate('Filename') }}</th>
+                        <th>{{ t.translate('Date') }}</th>
+                        <th>{{ t.translate('Size') }}</th>
+                        <th class="text-right">{{ t.translate('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for report in available_reports %}
                         <tr>
                             <td><input type="checkbox" name="selected_reports[]" value="{{ report.filename }}"></td>
-                            <td>{{ report.type }}</td>
+                            <td>{{ t.translate(report.type) }}</td>
                             <td>{{ report.filename }}</td>
                             <td>{{ report.date }}</td>
                             <td>{{ report.size }}</td>
                             <td class="text-right">
                                 <a href="{{ path('admin_updatestock_view_report', {'filename': report.filename}) }}" class="btn btn-default btn-xs" target="_blank">
-                                    <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    <i class="icon-eye-open"></i> {{ t.translate('View') }}
                                 </a>
                                 <a href="{{ module_dir }}uploads/reports/{{ report.filename }}" class="btn btn-default btn-xs" download="{{ report.filename }}">
-                                    <i class="icon-download"></i> {{ 'Download'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    <i class="icon-download"></i> {{ t.translate('Download') }}
                                 </a>
-                                <a href="{{ path('admin_updatestock_delete_report', {'filename': report.filename}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this report permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                    <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                <a href="{{ path('admin_updatestock_delete_report', {'filename': report.filename}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ t.translate('Delete this report permanently?') }}');">
+                                    <i class="icon-trash"></i> {{ t.translate('Delete') }}
                                 </a>
                             </td>
                         </tr>
@@ -240,13 +240,13 @@
             </table>
         </div>
         <div style="padding: 10px 0 0 0;">
-            <button type="submit" name="submitDeleteSelectedReports" class="btn btn-danger" onclick="return confirm('{{ 'Delete selected reports permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                <i class="icon-trash"></i> {{ 'Delete Selected Reports'|trans({}, 'Modules.Updatestock.Admin') }}
+            <button type="submit" name="submitDeleteSelectedReports" class="btn btn-danger" onclick="return confirm('{{ t.translate('Delete selected reports permanently?') }}');">
+                <i class="icon-trash"></i> {{ t.translate('Delete Selected Reports') }}
             </button>
         </div>
         </form>
     {% else %}
-        <div class="alert alert-info">{{ 'No reports available.'|trans({}, 'Modules.Updatestock.Admin') }}</div>
+        <div class="alert alert-info">{{ t.translate('No reports available.') }}</div>
     {% endif %}
 </div>
 
@@ -254,7 +254,7 @@
 
 <div class="panel">
     <div class="panel-heading">
-        <i class="icon-time"></i> <strong>{{ 'Backup History'|trans({}, 'Modules.Updatestock.Admin') }}</strong>
+        <i class="icon-time"></i> <strong>{{ t.translate('Backup History') }}</strong>
         {% if available_backups is defined and available_backups %}
             <span class="badge">{{ available_backups|length }}</span>
         {% endif %}
@@ -266,10 +266,10 @@
                 <thead>
                     <tr>
                         <th width="40"><input type="checkbox" class="checkmeable-backups"></th>
-                        <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
-                        <th class="text-right">{{ 'Actions'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                        <th>{{ t.translate('Filename') }}</th>
+                        <th>{{ t.translate('Date') }}</th>
+                        <th>{{ t.translate('Size') }}</th>
+                        <th class="text-right">{{ t.translate('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -280,11 +280,11 @@
                             <td>{{ backup.date }}</td>
                             <td>{{ backup.size }}</td>
                             <td class="text-right">
-                                <a href="{{ path('admin_updatestock_restore_backup', {'filename': backup.filename}) }}" class="btn btn-warning btn-xs" onclick="return confirm('{{ 'RESTORE BACKUP? This will overwrite current stock data with this backup version.'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                    <i class="icon-refresh"></i> {{ 'Restore'|trans({}, 'Modules.Updatestock.Admin') }}
+                                <a href="{{ path('admin_updatestock_restore_backup', {'filename': backup.filename}) }}" class="btn btn-warning btn-xs" onclick="return confirm('{{ t.translate('RESTORE BACKUP? This will overwrite current stock data with this backup version.') }}');">
+                                    <i class="icon-refresh"></i> {{ t.translate('Restore') }}
                                 </a>
-                                <a href="{{ path('admin_updatestock_delete_backup', {'filename': backup.filename}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this backup permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                                    <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                <a href="{{ path('admin_updatestock_delete_backup', {'filename': backup.filename}) }}" class="btn btn-danger btn-xs" onclick="return confirm('{{ t.translate('Delete this backup permanently?') }}');">
+                                    <i class="icon-trash"></i> {{ t.translate('Delete') }}
                                 </a>
                             </td>
                         </tr>
@@ -293,13 +293,13 @@
             </table>
         </div>
         <div style="padding: 10px 0 0 0;">
-            <button type="submit" name="submitDeleteSelectedBackups" class="btn btn-danger" onclick="return confirm('{{ 'Delete selected backups permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
-                <i class="icon-trash"></i> {{ 'Delete Selected Backups'|trans({}, 'Modules.Updatestock.Admin') }}
+            <button type="submit" name="submitDeleteSelectedBackups" class="btn btn-danger" onclick="return confirm('{{ t.translate('Delete selected backups permanently?') }}');">
+                <i class="icon-trash"></i> {{ t.translate('Delete Selected Backups') }}
             </button>
         </div>
         </form>
     {% else %}
-        <div class="alert alert-info">{{ 'No backups available.'|trans({}, 'Modules.Updatestock.Admin') }}</div>
+        <div class="alert alert-info">{{ t.translate('No backups available.') }}</div>
     {% endif %}
 </div>
 
@@ -307,21 +307,21 @@
 
 <div class="panel">
     <div class="panel-heading">
-        <i class="icon-terminal"></i> <strong>{{ 'Live Logs'|trans({}, 'Modules.Updatestock.Admin') }}</strong>
+        <i class="icon-terminal"></i> <strong>{{ t.translate('Live Logs') }}</strong>
     </div>
     <div class="form-horizontal">
         <div class="form-group row">
-            <label class="control-label col-lg-2 col-md-2 col-sm-2">{{ 'Show Last Lines'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <label class="control-label col-lg-2 col-md-2 col-sm-2">{{ t.translate('Show Last Lines') }}</label>
             <div class="col-lg-2 col-md-2 col-sm-4">
                 <select id="log-lines-selector" class="form-control">
-                    <option value="0">{{ 'No logs'|trans({}, 'Modules.Updatestock.Admin') }}</option>
+                    <option value="0">{{ t.translate('No logs') }}</option>
                     <option value="10">10</option>
                     <option value="30">30</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
                 </select>
             </div>
-            <label class="control-label col-lg-2 col-md-2 col-sm-2">{{ 'Log Level'|trans({}, 'Modules.Updatestock.Admin') }}</label>
+            <label class="control-label col-lg-2 col-md-2 col-sm-2">{{ t.translate('Log Level') }}</label>
             <div class="col-lg-2 col-md-2 col-sm-4">
                 <select id="log-level-selector" class="form-control">
                     <option value="INFO">INFO (Default)</option>
@@ -392,7 +392,7 @@
             const lines = selector.value;
             if (lines == 0) return;
 
-            status.innerText = "{{ 'Refreshing...'|trans({}, 'Modules.Updatestock.Admin') }}";
+            status.innerText = "{{ t.translate('Refreshing...') }}";
 
             // Check scroll position BEFORE updating content
             // Tolerance of 50px to consider "at bottom"
@@ -434,11 +434,11 @@
                         viewer.scrollTop = viewer.scrollHeight;
                     }
                 }
-                status.innerText = "{{ 'Last update:'|trans({}, 'Modules.Updatestock.Admin') }} " + new Date().toLocaleTimeString();
+                status.innerText = "{{ t.translate('Last update:') }} " + new Date().toLocaleTimeString();
             })
             .catch(error => {
                 console.error('Error fetching logs:', error);
-                status.innerText = "{{ 'Error fetching logs'|trans({}, 'Modules.Updatestock.Admin') }}";
+                status.innerText = "{{ t.translate('Error fetching logs') }}";
             });
         }
 
@@ -478,7 +478,7 @@
             const selected = document.querySelectorAll('input[name="selected_files[]"]:checked').length;
             if (selected === 0) {
                 e.preventDefault();
-                alert("{{ 'Please select at least one file.'|trans({}, 'Modules.Updatestock.Admin') }}");
+                alert("{{ t.translate('Please select at least one file.') }}");
             }
         }
 

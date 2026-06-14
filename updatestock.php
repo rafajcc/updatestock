@@ -17,7 +17,7 @@ class UpdateStock extends Module
     {
         $this->name = 'updatestock';
         $this->tab = 'administration';
-        $this->version = '1.0.30';
+        $this->version = '1.0.31';
         $this->author = 'Vera Technology';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
@@ -32,6 +32,16 @@ class UpdateStock extends Module
         $this->description = $this->l('Update product physical quantity by uploading text files with EAN codes.');
 
         $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
+    }
+
+    public function l($string, $specific = false, $locale = null)
+    {
+        static $translationService = null;
+        if ($translationService === null) {
+            $translationService = new \Module\UpdateStock\Service\TranslationService();
+        }
+        $translated = $translationService->translate($string);
+        return $translated !== $string ? $translated : parent::l($string, $specific, $locale);
     }
 
     public function install()

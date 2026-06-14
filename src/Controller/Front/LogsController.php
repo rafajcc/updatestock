@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Module\UpdateStock\Controller\Front;
 
 use Module\UpdateStock\Service\LogsService;
+use Module\UpdateStock\Service\TranslationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -11,8 +12,14 @@ use const false;
 
 class LogsController extends AbstractController
 {
-
     private const LOG_FILE_PATH = __DIR__ . '/../../../updatestock.log';
+
+    private $translationService;
+
+    public function __construct(TranslationService $translationService)
+    {
+        $this->translationService = $translationService;
+    }
 
     public function getLogsAction(Request $request)
     {
@@ -28,8 +35,7 @@ class LogsController extends AbstractController
             ]);
         } catch (Exception $e) {
             LogsService::log($e->getMessage());
-            // TODO translate this 
-            return new JsonResponse(['error' => 'Internal error getting module logs'], 500);
+            return new JsonResponse(['error' => $this->translationService->translate('Internal error getting module logs')], 500);
         }
     }
 
@@ -39,7 +45,7 @@ class LogsController extends AbstractController
 
         if (!file_exists($logPath)) {
             http_response_code(404);
-            exit('Log file not found');
+            exit($this->translationService->translate('Log file not found'));
         }
 
         header('Content-Type: text/plain');
