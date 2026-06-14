@@ -26,6 +26,7 @@ class UpdateStockController extends FrameworkBundleAdminController
         $module = \Module::getInstanceByName('updatestock');
         $moduleVersion = $module ? $module->version : '';
         $uploadDir = _PS_MODULE_DIR_ . '/updatestock/temp_files/';
+        $reportsDir = _PS_MODULE_DIR_ . 'updatestock/uploads/reports/';
 
         // Simple file listing for now (could be moved to service)
         $files = glob($uploadDir . '*.txt');
@@ -122,6 +123,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                         'uploaded_files' => $uploadedFiles,
                         'backup_available' => $backupAvailable,
                         'available_backups' => $this->backupService->getAvailableBackups(),
+                        'available_reports' => $this->getAvailableReports($reportsDir),
                         'preview_mode' => true,
                         'preview_stats' => $stats,
                         'preview_report' => $previewReportFile,
@@ -186,6 +188,19 @@ class UpdateStockController extends FrameworkBundleAdminController
                 }
             }
 
+            if ($request->request->has('submitDeleteReport')) {
+                $reportFile = $request->request->get('report_filename');
+                if ($reportFile) {
+                    if ($this->deleteReport($reportsDir, $reportFile)) {
+                        LogsService::log('Report deleted: ' . basename($reportFile));
+                        $this->addFlash('success', 'Report deleted');
+                    } else {
+                        LogsService::log('Failed to delete report: ' . basename($reportFile), 'ERROR');
+                        $this->addFlash('error', 'Failed to delete report');
+                    }
+                }
+            }
+
             if ($request->request->has('submitApplyFixes')) {
                 try {
                     $fixCount = $this->stockUpdateService->applyConsistencyFixes((int) $this->getContext()->shop->id);
@@ -217,9 +232,68 @@ class UpdateStockController extends FrameworkBundleAdminController
             'uploaded_files' => $uploadedFiles,
             'backup_available' => $backupAvailable,
             'available_backups' => $this->backupService->getAvailableBackups(),
+            'available_reports' => $this->getAvailableReports($reportsDir),
             'reports_generated' => $reports,
             'module_dir' => _MODULE_DIR_ . 'updatestock/',
             'module_version' => $moduleVersion
         ]);
+    }
+
+    private function getAvailableReports($reportsDir)
+    {
+        $files = glob($reportsDir . '*.csv') ?: [];
+        $reports = [];
+
+        usort($files, function ($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+
+        foreach ($files as $file) {
+            $reports[] = [
+                'filename' => basename($file),
+                'type' => $this->getReportType(basename($file)),
+                'date' => date('Y-m-d H:i:s', filemtime($file)),
+                'timestamp' => filemtime($file),
+                'size' => LogsService::getFileSize($file),
+            ];
+        }
+
+        return $reports;
+    }
+
+    private function getReportType($filename)
+    {
+        if (strpos($filename, 'preview_') === 0) {
+            return 'Preview';
+        }
+        if (strpos($filename, 'inventory_log_') === 0) {
+            return 'Inventory Log';
+        }
+        if (strpos($filename, 'zeroed_disabled_') === 0) {
+            return 'Zeroed/Disabled';
+        }
+        if (strpos($filename, 'unknown_eans_') === 0) {
+            return 'Unknown EANs';
+        }
+        if (strpos($filename, 'inconsistencies_') === 0) {
+            return 'Inconsistencies';
+        }
+
+        return 'Report';
+    }
+
+    private function deleteReport($reportsDir, $filename)
+    {
+        $filename = basename($filename);
+        if (!preg_match('/^[a-zA-Z0-9_.-]+\.csv$/', $filename)) {
+            return false;
+        }
+
+        $file = $reportsDir . $filename;
+        if (!file_exists($file)) {
+            return false;
+        }
+
+        return unlink($file);
     }
 }

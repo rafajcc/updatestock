@@ -78,7 +78,11 @@
                     <label>
                         <input type="radio" name="inventory_scope" value="multi" {% if inventory_scope is defined and inventory_scope == 'multi' %}checked{% endif %}>
                         {{ 'All Shops (Multistore)'|trans({}, 'Modules.Updatestock.Admin') }}
+                        <span class="label label-warning" style="margin-left: 6px;">Beta</span>
                     </label>
+                    <p class="help-block text-danger" style="margin-left: 20px;">
+                        {{ 'Beta feature: not recommended for regular use. Please contact the administrator before using it.'|trans({}, 'Modules.Updatestock.Admin') }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -177,6 +181,53 @@
     </ul>
 </div>
 {% endif %}
+
+<div class="panel">
+    <div class="panel-heading">
+        <i class="icon-file-text"></i> {{ 'Report History'|trans({}, 'Modules.Updatestock.Admin') }}
+        {% if available_reports is defined and available_reports %}
+            <span class="badge">{{ available_reports|length }}</span>
+        {% endif %}
+    </div>
+    {% if available_reports is defined and available_reports %}
+        <div style="max-height: 360px; overflow-y: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{{ 'Type'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                        <th>{{ 'Filename'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                        <th>{{ 'Date'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                        <th>{{ 'Size'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                        <th class="text-right">{{ 'Actions'|trans({}, 'Modules.Updatestock.Admin') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in available_reports %}
+                        <tr>
+                            <td>{{ report.type }}</td>
+                            <td>{{ report.filename }}</td>
+                            <td>{{ report.date }}</td>
+                            <td>{{ report.size }}</td>
+                            <td class="text-right">
+                                <form action="{{ path('admin_updatestock_index') }}" method="post" style="display:inline;">
+                                    <input type="hidden" name="report_filename" value="{{ report.filename }}">
+                                    <a href="{{ module_dir }}uploads/reports/{{ report.filename }}" class="btn btn-default btn-xs" target="_blank">
+                                        <i class="icon-eye-open"></i> {{ 'View'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    </a>
+                                    <button type="submit" name="submitDeleteReport" class="btn btn-danger btn-xs" onclick="return confirm('{{ 'Delete this report permanently?'|trans({}, 'Modules.Updatestock.Admin') }}');">
+                                        <i class="icon-trash"></i> {{ 'Delete'|trans({}, 'Modules.Updatestock.Admin') }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">{{ 'No reports available.'|trans({}, 'Modules.Updatestock.Admin') }}</div>
+    {% endif %}
+</div>
 
 <div class="panel">
     <div class="panel-heading">

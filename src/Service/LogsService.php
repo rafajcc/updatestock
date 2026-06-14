@@ -9,13 +9,13 @@ namespace Module\UpdateStock\Service;
 class LogsService
 {
 
-    private static $updateStockVersion = "1.0.25";
+    private static $updateStockVersion = null;
 
 
     public static function log($message, $severity = 'INFO', $sendToPSLogs = false)
     {
         $timestamp = date('Y-m-d H:i:s');
-        $logMessage = '[' . $timestamp . '] [' . $severity . '] [updatestock v' . self::$updateStockVersion . '] ' . $message . "\n";
+        $logMessage = '[' . $timestamp . '] [' . $severity . '] [updatestock v' . self::getUpdateStockVersion() . '] ' . $message . "\n";
         file_put_contents(dirname(__DIR__, 2) . '/updatestock.log', $logMessage, FILE_APPEND);
         if ($sendToPSLogs) {
             switch ($severity) {
@@ -36,6 +36,33 @@ class LogsService
             }
             \PrestaShopLogger::addLog($message, $psSeverity);
         }
+    }
+
+    private static function getUpdateStockVersion()
+    {
+        if (self::$updateStockVersion !== null) {
+            return self::$updateStockVersion;
+        }
+
+        if (class_exists('\Module')) {
+            $module = \Module::getInstanceByName('updatestock');
+            if ($module && !empty($module->version)) {
+                self::$updateStockVersion = $module->version;
+                return self::$updateStockVersion;
+            }
+        }
+
+        $moduleFile = dirname(__DIR__, 2) . '/updatestock.php';
+        if (file_exists($moduleFile)) {
+            $content = file_get_contents($moduleFile);
+            if (preg_match('/\$this->version\s*=\s*[\'"]([^\'"]+)[\'"]/', $content, $matches)) {
+                self::$updateStockVersion = $matches[1];
+                return self::$updateStockVersion;
+            }
+        }
+
+        self::$updateStockVersion = 'unknown';
+        return self::$updateStockVersion;
     }
 
     public static function readLastLines($file, $lines = 30)
