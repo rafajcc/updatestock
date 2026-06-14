@@ -427,7 +427,14 @@
                         }
                     });
 
-                    viewer.innerText = filtered.join("\n");
+                    let currentSev = 'INFO';
+                    viewer.innerHTML = filtered.map(line => {
+                        const severityMatch = line.match(/^\[.*?\]\s*\[(\w+)\]/);
+                        if (severityMatch) currentSev = severityMatch[1];
+                        const color = {DEBUG: '#888', INFO: '#0f0', WARN: '#ffa500', ERROR: '#ff4444', CRITICAL: '#f00'}[currentSev] || '#0f0';
+                        const bold = currentSev === 'CRITICAL' ? 'font-weight:bold;' : '';
+                        return `<span style="color:${color};${bold}">${line.replace(/</g, '&lt;')}</span>`;
+                    }).join("\n");
                     
                     // Only auto-scroll if user was already at the bottom
                     if (isAtBottom) {
