@@ -163,13 +163,13 @@ class StockUpdateService
 
     public function processInventory($files, $scope, $shopId, $totalInventory)
     {
-        // 1. Create Backup
-        if (!$this->backupService->createBackup()) {
+        // 1. Calculate changes before backing up, so the backup only captures affected rows.
+        $changes = $this->getInventoryChanges($files, $scope, $shopId, $totalInventory);
+
+        // 2. Create Backup
+        if (!$this->backupService->createBackup($changes, $scope, $shopId)) {
             throw new \Exception('Failed to create backup. Inventory execution aborted.');
         }
-
-        // 2. Get Changes (Re-calculate to be safe)
-        $changes = $this->getInventoryChanges($files, $scope, $shopId, $totalInventory);
 
         // 3. Apply Changes
         $this->applyChanges($changes, $scope, $shopId);

@@ -23,6 +23,8 @@ class UpdateStockController extends FrameworkBundleAdminController
     public function indexAction(Request $request)
     {
         $backupAvailable = $this->backupService->hasBackups();
+        $module = \Module::getInstanceByName('updatestock');
+        $moduleVersion = $module ? $module->version : '';
         $uploadDir = _PS_MODULE_DIR_ . '/updatestock/temp_files/';
 
         // Simple file listing for now (could be moved to service)
@@ -127,10 +129,12 @@ class UpdateStockController extends FrameworkBundleAdminController
                         'selected_files' => $selectedFiles,
                         'inventory_scope' => $scope,
                         'total_inventory' => $totalInventory,
-                        'module_dir' => _MODULE_DIR_ . 'updatestock/'
+                        'module_dir' => _MODULE_DIR_ . 'updatestock/',
+                        'module_version' => $moduleVersion
                     ]);
 
                 } catch (\Exception $e) {
+                    LogsService::log('Preview failed: ' . $e->getMessage(), 'ERROR');
                     $this->addFlash('error', $e->getMessage());
                 }
             }
@@ -154,6 +158,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                         $this->addFlash('success', 'Inventory Updated Successfully');
                     }
                 } catch (\Exception $e) {
+                    LogsService::log('Inventory execution failed: ' . $e->getMessage(), 'ERROR');
                     $this->addFlash('error', $e->getMessage());
                 }
             }
@@ -188,6 +193,7 @@ class UpdateStockController extends FrameworkBundleAdminController
                     // Refresh report logic could be here, but redirect is simpler
                     return $this->redirectToRoute('admin_updatestock_index');
                 } catch (\Exception $e) {
+                    LogsService::log('Consistency fixes failed: ' . $e->getMessage(), 'ERROR');
                     $this->addFlash('error', $e->getMessage());
                 }
             }
@@ -212,7 +218,8 @@ class UpdateStockController extends FrameworkBundleAdminController
             'backup_available' => $backupAvailable,
             'available_backups' => $this->backupService->getAvailableBackups(),
             'reports_generated' => $reports,
-            'module_dir' => _MODULE_DIR_ . 'updatestock/'
+            'module_dir' => _MODULE_DIR_ . 'updatestock/',
+            'module_version' => $moduleVersion
         ]);
     }
 }

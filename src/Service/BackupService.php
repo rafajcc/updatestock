@@ -3,14 +3,12 @@
 namespace Module\UpdateStock\Service;
 
 use Db;
-use Context;
 use Module\UpdateStock\Service\LogsService;
 
 class BackupService
 {
     private $moduleDir;
     const BACKUP_DIR = 'backups/';
-    const BACKUP_TABLES = ['stock_available', 'stock', 'product', 'product_shop'];
 
     public function __construct($moduleDir)
     {
@@ -27,64 +25,66 @@ class BackupService
         return $dir;
     }
 
-    public function createBackup()
+    public function createBackup(array $changes = [], $scope = 'single', $shopId = null)
     {
-        $tables = self::BACKUP_TABLES;
-        $content = '';
-        $db = Db::getInstance();
-
-        // Validate DB connection and tables exist
-        foreach ($tables as $table) {
-            $tableName = _DB_PREFIX_ . $table;
-            // Basic sanity check: does table exist?
-            $check = $db->executeS("SHOW TABLES LIKE '$tableName'");
-            if (empty($check)) {
-                // Warning: Table might not exist (e.g. ps_stock in newer PS versions without ASM). 
-                // We shouldn't fail, just skip or log.
-                continue;
-            }
-
-            $content .= "DROP TABLE IF EXISTS `$tableName`;\n";
-            $createTable = $db->getRow("SHOW CREATE TABLE `$tableName`");
-            if ($createTable && isset($createTable['Create Table'])) {
-                $content .= $createTable['Create Table'] . ";\n\n";
-            }
-
-            // Dump Data
-            $rows = $db->query("SELECT * FROM `$tableName`");
-            while ($row = $db->nextRow($rows)) {
-                $values = array_map(function ($value) {
-                    if ($value === null)
-                        return 'NULL';
-                    return "'" . pSQL($value, true) . "'";
-                }, $row);
-                $content .= "INSERT INTO `$tableName` VALUES (" . implode(', ', $values) . ");\n";
-            }
-            $content .= "\n";
-        }
-
-        if (empty($content)) {
+        if (empty($changes)) {
+            LogsService::log('Backup creation aborted: no calculated changes were provided.', 'ERROR');
             return false;
         }
 
-        $filename = 'backup_' . date('Ymd_His') . '.sql';
+        $payload = [
+            'format' => 'updatestock_row_backup',
+            'version' => 1,
+            'created_at' => date('Y-m-d H:i:s'),
+            'scope' => $scope,
+            'shop_id' => $shopId ? (int) $shopId : null,
+            'prefix' => _DB_PREFIX_,
+            'tables' => [
+                'stock_available' => [],
+                'product' => [],
+                'product_shop' => [],
+            ],
+        ];
+
+        $payload['tables']['stock_available'] = $this->captureStockAvailableRows($changes, $scope, $shopId);
+        $payload['tables']['product'] = $this->captureProductRows($changes);
+        $payload['tables']['product_shop'] = $this->captureProductShopRows($changes, $scope, $shopId);
+
+        $rowCount = 0;
+        foreach ($payload['tables'] as $rows) {
+            $rowCount += count($rows);
+        }
+
+        if ($rowCount === 0) {
+            LogsService::log('Backup creation aborted: none of the affected rows could be captured.', 'ERROR');
+            return false;
+        }
+
+        $content = json_encode($payload, JSON_PRETTY_PRINT);
+        if ($content === false) {
+            LogsService::log('Backup creation aborted: could not encode backup payload as JSON.', 'ERROR');
+            return false;
+        }
+
+        $filename = 'backup_' . date('Ymd_His') . '.json';
         $fullPath = $this->getBackupDir() . $filename;
 
         $write = file_put_contents($fullPath, $content);
-        if ($write === false || $write < 100) {
-            // < 100 bytes is suspicious for a backup of these tables
+        if ($write === false || $write < 50) {
             if (file_exists($fullPath))
                 unlink($fullPath);
+            LogsService::log('Backup creation failed: could not write backup file ' . $fullPath, 'ERROR');
             return false;
         }
 
+        LogsService::log('Row backup created: ' . $filename . ' (' . $rowCount . ' affected rows captured).');
         return true;
     }
 
     public function getAvailableBackups()
     {
         $dir = $this->getBackupDir();
-        $files = glob($dir . 'backup_*.sql');
+        $files = glob($dir . 'backup_*.json') ?: [];
         $backups = [];
 
         if ($files) {
@@ -110,74 +110,229 @@ class BackupService
         $file = $dir . basename($filename);
 
         if (!file_exists($file)) {
+            LogsService::log('Restore failed: backup file not found: ' . basename($filename), 'ERROR');
             return false;
         }
 
-        $sql = file_get_contents($file);
-        if (empty($sql) || strlen($sql) < 50)
+        if (pathinfo($file, PATHINFO_EXTENSION) !== 'json') {
+            LogsService::log('Restore failed: unsupported backup file type: ' . basename($filename), 'ERROR');
             return false;
-
-        $db = Db::getInstance();
-        $timestamp = date('YmdHis');
-        $renamedTables = [];
-
-        // 1. Safe Rename: Move current tables to safe backup names
-        foreach (self::BACKUP_TABLES as $table) {
-            $tableName = _DB_PREFIX_ . $table;
-            $backupName = $tableName . '_bak_' . $timestamp;
-
-            // Check if table exists before renaming
-            $exists = $db->executeS("SHOW TABLES LIKE '$tableName'");
-            if (!empty($exists)) {
-                if ($db->execute("RENAME TABLE `$tableName` TO `$backupName`")) {
-                    $renamedTables[$tableName] = $backupName;
-                } else {
-                    // Fail immediately if we can't safe-keep current data
-                    $this->rollbackRestore($renamedTables);
-                    return false;
-                }
-            }
         }
 
-        // 2. Execute Restore
-        $queries = preg_split('/;\s*[\r\n]+/', $sql);
-        $success = true;
-
-        foreach ($queries as $query) {
-            $query = trim($query);
-            if (!empty($query)) {
-                if (!$db->execute($query)) {
-                    $success = false;
-                    break;
-                }
-            }
+        $content = file_get_contents($file);
+        if (empty($content) || strlen($content) < 50) {
+            LogsService::log('Restore failed: backup file is empty or too small: ' . basename($filename), 'ERROR');
+            return false;
         }
 
-        // 3. Verify & Finalize
-        if ($success) {
-            // Drop the safe backups we made
-            foreach ($renamedTables as $original => $backup) {
-                $db->execute("DROP TABLE IF EXISTS `$backup`");
-            }
+        $payload = json_decode($content, true);
+        if (!is_array($payload) || !isset($payload['format']) || $payload['format'] !== 'updatestock_row_backup') {
+            LogsService::log('Restore failed: invalid backup format in file ' . basename($filename), 'ERROR');
+            return false;
+        }
+
+        try {
+            $this->restoreRows($payload);
+            LogsService::log('Row backup restored successfully: ' . basename($filename));
             return true;
-        } else {
-            // Restore failure: Rollback!
-            // Drop any partial tables created by the failed dump execution
-            foreach (self::BACKUP_TABLES as $table) {
-                $tableName = _DB_PREFIX_ . $table;
-                $db->execute("DROP TABLE IF EXISTS `$tableName`");
-            }
-            // Restore from renamed
-            $this->rollbackRestore($renamedTables);
+        } catch (\Exception $e) {
+            LogsService::log('Restore failed for ' . basename($filename) . ': ' . $e->getMessage(), 'ERROR');
             return false;
         }
     }
 
-    private function rollbackRestore($renamedTables)
+    private function captureStockAvailableRows(array $changes, $scope, $shopId)
     {
+        $rowsToCapture = [];
+        foreach (['updated', 'zeroed'] as $section) {
+            if (empty($changes[$section])) {
+                continue;
+            }
+            foreach ($changes[$section] as $item) {
+                $rowsToCapture[$item['id_product'] . ':' . $item['id_product_attribute']] = [
+                    'id_product' => (int) $item['id_product'],
+                    'id_product_attribute' => (int) $item['id_product_attribute'],
+                ];
+                $rowsToCapture[$item['id_product'] . ':0'] = [
+                    'id_product' => (int) $item['id_product'],
+                    'id_product_attribute' => 0,
+                ];
+            }
+        }
+
+        $rows = [];
+        foreach ($rowsToCapture as $item) {
+            foreach ($this->getStockRowsForBackup($item['id_product'], $item['id_product_attribute'], $scope, $shopId) as $row) {
+                $rows[] = $this->backupRow($row);
+            }
+        }
+
+        return $rows;
+    }
+
+    private function captureProductRows(array $changes)
+    {
+        $ids = $this->getDisabledProductIds($changes);
+        if (empty($ids)) {
+            return [];
+        }
+
+        $sql = 'SELECT id_product, active FROM `' . _DB_PREFIX_ . 'product`
+                WHERE id_product IN (' . implode(',', $ids) . ')';
+
+        return $this->backupRows(Db::getInstance()->executeS($sql));
+    }
+
+    private function captureProductShopRows(array $changes, $scope, $shopId)
+    {
+        $ids = $this->getDisabledProductIds($changes);
+        if (empty($ids)) {
+            return [];
+        }
+
+        $sql = 'SELECT id_product, id_shop, active FROM `' . _DB_PREFIX_ . 'product_shop`
+                WHERE id_product IN (' . implode(',', $ids) . ')';
+        if ($scope === 'single' && $shopId) {
+            $sql .= ' AND id_shop = ' . (int) $shopId;
+        }
+
+        return $this->backupRows(Db::getInstance()->executeS($sql));
+    }
+
+    private function getStockRowsForBackup($idProduct, $idProductAttribute, $scope, $shopId)
+    {
+        $sql = 'SELECT id_stock_available, id_product, id_product_attribute, id_shop, id_shop_group,
+                       quantity, physical_quantity, reserved_quantity, depends_on_stock, out_of_stock
+                FROM `' . _DB_PREFIX_ . 'stock_available`
+                WHERE id_product = ' . (int) $idProduct . '
+                AND id_product_attribute = ' . (int) $idProductAttribute;
+        if ($scope === 'single' && $shopId) {
+            $sql .= ' AND id_shop = ' . (int) $shopId;
+        }
+
+        $rows = Db::getInstance()->executeS($sql);
+
+        if (empty($rows) && $scope === 'single' && $shopId) {
+            return [[
+                '_exists' => false,
+                'id_product' => (int) $idProduct,
+                'id_product_attribute' => (int) $idProductAttribute,
+                'id_shop' => (int) $shopId,
+                'id_shop_group' => 0,
+            ]];
+        }
+
+        return $rows ?: [];
+    }
+
+    private function getDisabledProductIds(array $changes)
+    {
+        if (empty($changes['disabled'])) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($changes['disabled'] as $item) {
+            $ids[(int) $item['id_product']] = (int) $item['id_product'];
+        }
+
+        return array_values($ids);
+    }
+
+    private function backupRows($rows)
+    {
+        if (empty($rows)) {
+            return [];
+        }
+
+        return array_map([$this, 'backupRow'], $rows);
+    }
+
+    private function backupRow(array $row)
+    {
+        if (!isset($row['_exists'])) {
+            $row['_exists'] = true;
+        }
+
+        return $row;
+    }
+
+    private function restoreRows(array $payload)
+    {
+        if (!isset($payload['tables']) || !is_array($payload['tables'])) {
+            throw new \Exception('missing tables section');
+        }
+
         $db = Db::getInstance();
-        foreach ($renamedTables as $original => $backup) {
-            $db->execute("RENAME TABLE `$backup` TO `$original`");
+        $db->execute('START TRANSACTION');
+
+        try {
+            $this->restoreStockAvailableRows($payload['tables']['stock_available'] ?? []);
+            $this->restoreProductRows($payload['tables']['product'] ?? []);
+            $this->restoreProductShopRows($payload['tables']['product_shop'] ?? []);
+            $db->execute('COMMIT');
+        } catch (\Exception $e) {
+            $db->execute('ROLLBACK');
+            throw $e;
+        }
+    }
+
+    private function restoreStockAvailableRows(array $rows)
+    {
+        foreach ($rows as $row) {
+            $where = 'id_product = ' . (int) $row['id_product'] . '
+                AND id_product_attribute = ' . (int) $row['id_product_attribute'] . '
+                AND id_shop = ' . (int) $row['id_shop'] . '
+                AND id_shop_group = ' . (int) $row['id_shop_group'];
+
+            if (isset($row['_exists']) && !$row['_exists']) {
+                $this->executeOrFail('DELETE FROM `' . _DB_PREFIX_ . 'stock_available` WHERE ' . $where, 'delete stock_available row that did not exist before backup');
+                continue;
+            }
+
+            $this->executeOrFail(
+                'UPDATE `' . _DB_PREFIX_ . 'stock_available`
+                 SET quantity = ' . (int) $row['quantity'] . ',
+                     physical_quantity = ' . (int) $row['physical_quantity'] . ',
+                     reserved_quantity = ' . (int) $row['reserved_quantity'] . ',
+                     depends_on_stock = ' . (int) $row['depends_on_stock'] . ',
+                     out_of_stock = ' . (int) $row['out_of_stock'] . '
+                 WHERE ' . $where,
+                'restore stock_available row'
+            );
+        }
+    }
+
+    private function restoreProductRows(array $rows)
+    {
+        foreach ($rows as $row) {
+            $this->executeOrFail(
+                'UPDATE `' . _DB_PREFIX_ . 'product`
+                 SET active = ' . (int) $row['active'] . '
+                 WHERE id_product = ' . (int) $row['id_product'],
+                'restore product active flag'
+            );
+        }
+    }
+
+    private function restoreProductShopRows(array $rows)
+    {
+        foreach ($rows as $row) {
+            $this->executeOrFail(
+                'UPDATE `' . _DB_PREFIX_ . 'product_shop`
+                 SET active = ' . (int) $row['active'] . '
+                 WHERE id_product = ' . (int) $row['id_product'] . '
+                 AND id_shop = ' . (int) $row['id_shop'],
+                'restore product_shop active flag'
+            );
+        }
+    }
+
+    private function executeOrFail($sql, $context)
+    {
+        LogsService::log('Restore query (' . $context . '): ' . $sql, 'DEBUG');
+        if (!Db::getInstance()->execute($sql)) {
+            throw new \Exception($context . ' failed');
         }
     }
 
@@ -206,7 +361,7 @@ class BackupService
 
     public function hasBackups()
     {
-        $files = glob($this->getBackupDir() . 'backup_*.sql');
+        $files = glob($this->getBackupDir() . 'backup_*.json') ?: [];
         return !empty($files);
     }
 }
